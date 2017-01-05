@@ -1,0 +1,93 @@
+{
+	"Server":{
+		"Port": 4000
+	},
+	"Database":{
+		"DbType": "mongodb",
+		"HostName": "localhost",
+		"DbName": "TrafficMap",
+		"Port": 3000,
+
+		"RecordHistory": true,		// Auto record density map
+		"TimerRecord": 20				// every 5 minute
+	},
+
+	"ClientMap":{
+		"TokenKey": "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpandmbXliNDBjZWd2M2x6bDk3c2ZtOTkifQ._QA7i5Mpkd_m30IGElHziw",
+		"WaySettings":{
+					"Service": {
+								"Weight": 0,
+								"Color": "#5b615f",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 1.0
+								},
+					"Residential": {
+								"Weight": 1.5,
+								"Color": "#1a9850",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.7
+								},
+					"Tertiary": {
+								"Weight": 3,
+								"Color": "#d9ef8b",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.8
+								},
+					"Primary": {
+								"Weight": 3,
+								"Color": "#fc8d59",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.8
+								},
+					"Secondary": {
+								"Weight": 3,
+								"Color": "#fee08b",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.8
+								},
+					"Trunk": {
+								"Weight": 0,
+								"Color": "#000000",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.0
+								},
+					"Motorway": {
+								"Weight": 4,
+								"Color": "#d73027",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 1.0
+								},
+					"Unclassified": {
+								"Weight": 2.5,
+								"Color": "#d9ef8b",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 0.7
+								},
+					"Default": {
+								"Weight": 2,
+								"Color": "#d73027",
+								"Fill": false,
+								"LineJoin": "round",
+								"LineCap" : "round",
+								"Opacity" : 1.0
+								}
+				}
+
+	}
+}
