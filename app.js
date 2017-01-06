@@ -44,14 +44,12 @@ app.use('/segments', segments);
 app.use('/density', density);
 // SETTING ROUTES (END) ------------------------
 
-
 // SPECIAL CASE - ERROR 404 HANDLER
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
 });
-
 
 // ERROR HANDLER
 app.use(function(err, req, res, next) {
@@ -63,7 +61,6 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
 
 // CONNECT TO DATABASE ---------------------------
 var mongoose = require('mongoose')

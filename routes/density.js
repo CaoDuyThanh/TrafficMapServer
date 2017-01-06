@@ -23,8 +23,10 @@ router.get('/segment/:segment_id', function(req, res, next){
 
 /* Get /street/street_id  -  get information of a group of segments in a street based on street_id */
 router.get('/street/:street_id', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  
 	var street = global.AllStreets[req.params.street_id];
-
 	if (street){
 		var segments = {};
 		var counter = 0;
@@ -41,7 +43,7 @@ router.get('/street/:street_id', function(req, res, next){
 			}
 		});
 	}else{
-		return next("Err");
+		res.json({});		
 	}
 });
 
