@@ -47,6 +47,32 @@ router.get('/street/:street_id', function(req, res, next){
 	}
 });
 
+/* Get /streets/  -  get information of a group of segments of a group of streets */
+router.get('/streets/', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  	
+  	var streets = {};
+  	var streetIds = req.query.streetIds;
+  	for (var idx = 0; idx < streetIds.length; idx++){
+  		var streetId = streetIds[idx];
+  		var street = global.AllStreets[streetId];
+  		if (street){
+			var segments = {};			
+			street.segments.forEach(function(segment_id){
+				var segment = global.AllSegments[segment_id];
+				var nodeStart = global.AllNodes[segment.node_start];
+				var nodeEnd = global.AllNodes[segment.node_end];		
+				var newSegment = segmentViewModel.CreateSegment(segment, nodeStart, nodeEnd);
+				segments[segment_id] = newSegment;
+			});
+		}
+		streets[streetId] = segments;
+  	}
+  	res.json(streets);
+});
+
+
 /* Get /cell/cell_id  -  get information of a group of segments in a cell based on cell_id */
 router.get('/cell/:cell_id', function(req, res, next){
 	// Get cell by cell_id
