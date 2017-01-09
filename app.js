@@ -16,14 +16,12 @@ var nodeHandler = require('./utils/NodeHandler');
 var segmentHandler = require('./utils/SegmentHandler');
 var streetHandler = require('./utils/StreetHandler');
 
-
 // IMPORT ROUTES ----------------------------
 var index = require('./routes/index');
 var segments = require('./routes/segments');
 var density = require('./routes/density');
 var app = express();
 // IMPORT ROUTES (END) ----------------------
-
 
 // VIEW ENGINE SETUP
 app.set('views', path.join(__dirname, 'views'));
