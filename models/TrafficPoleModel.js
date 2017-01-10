@@ -8,6 +8,8 @@ var LatLon = mongoose.Schema({
 },{ _id : false });
 
 var Camera = mongoose.Schema({
+	area: Number,
+	one_way: Boolean,
     active: Boolean,
 	width: Number,
 	angle_x: Number,
@@ -29,6 +31,7 @@ var TrafficPoleSchema = new mongoose.Schema({
 	name: String,
 	width: Number,
 	type: Boolean,
+	area: Number,
 	cameras: [Camera]
 });
 
