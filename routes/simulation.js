@@ -129,6 +129,54 @@ router.post('/trafficpole/', function(req, res, next){
 		}
 	});
 });
+
+/**
+ * PUT /trafficpole/  -  update an exist traffic pole
+ * @param  {[type]} req               [description]
+ * @param  {[type]} res               [description]
+ * @param  {[type]} next){	var       updateTrafficPole [description]
+ * @param  {[type]} updateTrafficPole [description]
+ * @param  {String} function(err,     post){		if       (err){			console.error("Error: occur while updating traffic pole ! ");			console.error("Pole_id [description]
+ * @return {[type]}                   [description]
+ */
+router.put('/trafficpole/', function(req, res, next){
+	var updateTrafficPole = req.body;
+
+	trafficPoleModel.findOneAndUpdate({pole_id: updateTrafficPole.pole_id}, updateTrafficPole, function(err, post){
+		if (err){
+			console.error("Error: occur while updating traffic pole ! ");
+			console.error("Pole_id = " + trafficPoleId);
+			console.error(err);
+			return next(err);
+		}
+
+		res.json('success!');
+	});
+});
+
+
+/**
+ * DELETE /trafficpole/:trafficpole_id  -  delete an exist traffic pole by trafficpole_id
+ * @param  {[type]}            [description]
+ * @param  {[type]}            [description]
+ * @param  {[type]}            [description]
+ * @param  {String}            [description]
+ * @return {json}              [result of deleting]
+ */
+router.delete('/trafficpole/:trafficpole_id', function(req, res, next){
+	var trafficPoleId = req.params.trafficpole_id;
+
+	trafficPoleModel.findOneAndRemove({pole_id: trafficPoleId}, function(err, post){
+		if (err){
+			console.error("Error: occur while deleting traffic pole ! ");
+			console.error("Pole_id = " + trafficPoleId);
+			console.error(err);
+			return next(err);	
+		}
+
+		res.json('success!');
+	});
+});
 // TRAFFIC POLE (END) ---------------------------------------
 
 
