@@ -20,6 +20,7 @@ var streetHandler = require('./utils/StreetHandler');
 var index = require('./routes/index');
 var segments = require('./routes/segments');
 var density = require('./routes/density');
+var simulation = require('./routes/simulation');
 var app = express();
 // IMPORT ROUTES (END) ----------------------
 
@@ -40,6 +41,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', index);
 app.use('/segments', segments);
 app.use('/density', density);
+app.use('/simulation', simulation);
 // SETTING ROUTES (END) ------------------------
 
 // SPECIAL CASE - ERROR 404 HANDLER
