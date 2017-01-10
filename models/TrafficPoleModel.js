@@ -31,7 +31,6 @@ var TrafficPoleSchema = new mongoose.Schema({
 	name: String,
 	width: Number,
 	type: Boolean,
-	area: Number,
 	cameras: [Camera]
 });
 
