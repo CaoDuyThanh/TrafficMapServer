@@ -42,7 +42,7 @@ router.get('/trafficpoles/', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
-  	var trafficPoles = {};
+  	var trafficPoles = [];
   	var trafficPoleIds = req.query.trafficpole_ids;
   	trafficPoleModel.find({pole_id: {$in: trafficPoleIds}}, function(err, data){
 		if (err){ 
@@ -53,7 +53,7 @@ router.get('/trafficpoles/', function(req, res, next){
 		var count = 0;
 		data.forEach(function(trafficPole){
 			count++;
-			trafficPoles[trafficPole.pole_id] = trafficPole;
+			trafficPoles.push(trafficPole);
 
 			if (count == data.length){
 				res.json(trafficPoles);
@@ -72,7 +72,7 @@ router.get('/alltrafficpoles/', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
-  	var trafficPoles = {};
+  	var trafficPoles = [];
   	trafficPoleModel.find({}, function(err, data){
 		if (err){ 
 			console.error("Error: Can not load traffic pole by pole_id = " + trafficpole_id + " ! " + err);
@@ -82,7 +82,7 @@ router.get('/alltrafficpoles/', function(req, res, next){
 		var count = 0;
 		data.forEach(function(trafficPole){
 			count++;
-			trafficPoles[trafficPole.pole_id] = trafficPole;
+			trafficPoles.push(trafficPole);
 			console.log(count);
 			if (count == data.length){
 				res.json(trafficPoles);
