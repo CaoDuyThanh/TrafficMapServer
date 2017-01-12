@@ -101,8 +101,10 @@ router.get('/alltrafficpoles/', function(req, res, next){
  *         - error if traffic pole exist
  */
 router.post('/trafficpole/', function(req, res, next){
-	var newTrafficPole = req.body;
-
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	var newTrafficPole = JSON.parse(req.body.data);
+	
 	trafficPoleModel.findOne({pole_id: newTrafficPole.pole_id}, function(err, data){
 		if (err){
 			console.error("Error: occur while checking traffic pole exist ! ");
@@ -123,9 +125,22 @@ router.post('/trafficpole/', function(req, res, next){
 				res.json('success!')
 			});
 		}else{
-			console.log("Traffic pole exist !");
+			//console.log("Traffic pole exist !");
+			//console.log("Data = " + JSON.stringify(newTrafficPole));
+			//next(new Error('Traffic pole exist !'));
+			console.log("Update traffic pole!");
 			console.log("Data = " + JSON.stringify(newTrafficPole));
-			next(new Error('Traffic pole exist !'));
+			//next(new Error('Update traffic pole !'));
+			trafficPoleModel.findOneAndUpdate({pole_id: newTrafficPole.pole_id}, newTrafficPole, function(err, post){
+				if (err){
+					console.error("Error: occur while updating traffic pole ! ");
+					console.error("Pole_id = " + newTrafficPole.pole_id);
+					console.error(err);
+					return next(err);
+				}
+
+				res.json('update success!');
+			});
 		}
 	});
 });
@@ -140,7 +155,9 @@ router.post('/trafficpole/', function(req, res, next){
  * @return {[type]}                   [description]
  */
 router.put('/trafficpole/', function(req, res, next){
-	var updateTrafficPole = req.body;
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	var updateTrafficPole = JSON.parse(req.body.data);
 
 	trafficPoleModel.findOneAndUpdate({pole_id: updateTrafficPole.pole_id}, updateTrafficPole, function(err, post){
 		if (err){
@@ -164,6 +181,8 @@ router.put('/trafficpole/', function(req, res, next){
  * @return {json}              [result of deleting]
  */
 router.delete('/trafficpole/:trafficpole_id', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 	var trafficPoleId = req.params.trafficpole_id;
 
 	trafficPoleModel.findOneAndRemove({pole_id: trafficPoleId}, function(err, post){
