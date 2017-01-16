@@ -66,8 +66,8 @@ router.get('/streets/', function(req, res, next){
 				var newSegment = segmentViewModel.CreateSegment(segment, nodeStart, nodeEnd);
 				segments[segment_id] = newSegment;
 			});
+			streets[streetId] = segments;
 		}
-		streets[streetId] = segments;
   	}
   	res.json(streets);
 });
