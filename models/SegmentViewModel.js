@@ -1,3 +1,4 @@
+var long = require('long');
 
 var CreateSegment = function(segment, nodeStart, nodeEnd){
 	var newNodeStart = {};
@@ -8,13 +9,14 @@ var CreateSegment = function(segment, nodeStart, nodeEnd){
 	newNodeEnd.lat = nodeEnd.node_lat;
 
 	var newSegment = {};
+	newSegment.segment_id = segment.segment_id;
 	newSegment.node_start = newNodeStart;
 	newSegment.node_end = newNodeEnd;
 	newSegment.density_ste = segment.density_ste;
 	newSegment.velocity_ste = segment.velocity_ste;
 	newSegment.density_ets = segment.density_ets;
 	newSegment.velocity_ets = segment.velocity_ets;
-	newSegment.status = 4;
+	newSegment.weather = 'NaN';
 
 	return newSegment;
 }
