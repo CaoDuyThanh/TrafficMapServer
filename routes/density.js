@@ -1,6 +1,23 @@
 // IMPORT LIBRARY
 var express = require('express');
 var router = express.Router();
+var fs = require('fs');
+var long = require('long');
+var protobuf = require("protobufjs");
+var byteBuffer = require("bytebuffer");
+
+// CREATE PROTOCOL BUFFER
+protobuf.convertFieldsToCamelCase = false;
+var densityStreetsProto;
+var streetProto;
+var segmentProto;
+var latlonProto;
+protobuf.load('./protobuf/streets.proto', function(err, root){
+	densityStreetsProto = root.lookup("DensityStreets.DensityStreets");
+	streetProto = root.lookup("DensityStreets.Street");
+	segmentProto = root.lookup("DensityStreets.Segment");
+	latlonProto = root.lookup("DensityStreets.LatLon");
+});
 
 // IMPORT VIEW MODEL
 var segmentViewModel = require('../models/SegmentViewModel');
@@ -8,7 +25,13 @@ var segmentViewModel = require('../models/SegmentViewModel');
 // IMPORT UTILS
 var mapUtils = require('../utils/MapUtils');
 
-/* Get /segment/:segment_id  -  get information of a segment based on segment_id */
+/**
+ * Get /segment/:segment_id  -  get information of a segment based on segment_id
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @return {[Json]}                       [description]
+ */
 router.get('/segment/:segment_id', function(req, res, next){
 	// Get segment by segment_id
 	segment = global.AllSegments[req.params.segment_id];
@@ -21,7 +44,14 @@ router.get('/segment/:segment_id', function(req, res, next){
 	}
 });
 
-/* Get /street/street_id  -  get information of a group of segments in a street based on street_id */
+
+/**
+ * Get /street/street_id  -  get information of a group of segments in a street based on street_id
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @return {[Json]}                       [description]
+ */
 router.get('/street/:street_id', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -47,7 +77,75 @@ router.get('/street/:street_id', function(req, res, next){
 	}
 });
 
-/* Get /streets/  -  get information of a group of segments of a group of streets */
+
+/**
+ * Get /streetspbf/  -  get information of a group of segments of a group of streets
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @return {[protobuffer]}                [Data will be encode and send back to client by using protocol buffer]
+ */
+router.get('/streetspbf/', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  	var streetsRes = densityStreetsProto.create({
+  													streets: []
+  												});
+  	var streetIds = req.query.streetIds;
+  	var count1 = 0;
+  	for (var idx = 0; idx < streetIds.length; idx++){
+  		var streetId = streetIds[idx];
+  		var street = global.AllStreets[streetId];
+  		if (street){  
+  			var streetRes = streetProto.create({
+  													streetId: streetId,
+  													segments: []
+  												});  						
+  			var count2 = 0;
+			street.segments.forEach(function(segment_id){
+				var segment = global.AllSegments[segment_id];
+				var nodeStart = global.AllNodes[segment.node_start];
+				var nodeEnd = global.AllNodes[segment.node_end];		
+				
+				var nodeStartRes = latlonProto.create({
+														lon: nodeStart.node_lon,
+														lat: nodeStart.node_lat
+													});
+				var nodeEndRes = latlonProto.create({
+														lon: nodeEnd.node_lon,
+														lat: nodeEnd.node_lat
+													});				
+				var segmentRes = segmentProto.create({
+														segmentId: segment_id,
+														nodeStart: nodeStartRes,
+														nodeEnd: nodeEndRes,
+														densitySte: segment.density_ste,
+														velocitySte: segment.velocity_ste,
+														densityEts: segment.density_ets,
+														velocityEts: segment.velocity_ets,
+														weather: 'NaN'
+													});
+				streetRes.segments[count2] = segmentRes;
+				count2++;
+			});
+			streetsRes.streets[count1] = streetRes;
+			count1++;  			
+		}
+	}
+
+  	// Send buffer to client
+  	var buffer = densityStreetsProto.encode(streetsRes).finish();
+	res.send(buffer);
+});
+
+
+/**
+ * Get /streets/  -  get information of a group of segments of a group of streets
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ */
 router.get('/streets/', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -73,7 +171,12 @@ router.get('/streets/', function(req, res, next){
 });
 
 
-/* Get /cell/cell_id  -  get information of a group of segments in a cell based on cell_id */
+/**
+ * Get /cell/cell_id  -  get information of a group of segments in a cell based on cell_id
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ */
 router.get('/cell/:cell_id', function(req, res, next){
 	// Get cell by cell_id
 	var cell = global.AllCells[req.params.cell_id];
@@ -126,7 +229,12 @@ function updateSegment(allSegments, unknownSegment){
 	}
 }
 
-/* POST /density/info=json */
+/**
+ * POST /density/segments  -  Handle POST request from client - update density of a list of segments
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ */
 router.post('/segments/', function(req, res, next){
 	// Parse json data
 	segmentsRec = req.body.segment;
