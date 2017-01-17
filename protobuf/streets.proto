@@ -1,0 +1,24 @@
+package DensityStreets;
+syntax = "proto3";
+
+message LatLon{
+	double lon = 1;
+	double lat = 2;
+}
+message Segment{
+	int64 segment_id = 1;
+	LatLon node_start = 2;
+	LatLon node_end = 3;
+	int32 density_ste = 4;
+	int32 velocity_ste = 5;
+	int32 density_ets = 6;
+	int32 velocity_ets = 7;
+	string weather = 8;
+}
+message Street{
+	int64 street_id = 1;
+	repeated Segment segments = 2;
+}
+message DensityStreets{
+	repeated Street streets = 1;
+}
