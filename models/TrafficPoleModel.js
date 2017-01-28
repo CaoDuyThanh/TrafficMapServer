@@ -1,5 +1,7 @@
 var mongoose = require('mongoose');
 require('mongoose-long')(mongoose);
+var mongoosePaginate = require('mongoose-paginate');
+
 var schemaTypes = mongoose.Schema.Types;
 
 var LatLon = mongoose.Schema({
@@ -33,5 +35,6 @@ var TrafficPoleSchema = new mongoose.Schema({
 	type: Boolean,
 	cameras: [Camera]
 });
+TrafficPoleSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('traffic_pole', TrafficPoleSchema);
