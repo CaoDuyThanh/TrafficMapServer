@@ -5,6 +5,21 @@ var router = express.Router();
 // IMPORT VIEW MODEL
 var trafficPoleModel = require('../models/TrafficPoleModel');
 
+router.use(function(req, res, next) {
+	if (req.method === 'OPTIONS'){
+	  	res.header("Access-Control-Allow-Origin", "*");
+		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		console.log('abs');
+		res.status(200);
+		res.end();
+	}
+	else{
+		next();
+	}
+});
+
+
 // TRAFFIC POLE ---------------------------------------------
 /**
  * GET /trafficpole/:trafficpole_id - get a traffic pole data by specific trafficpole_id
@@ -31,6 +46,28 @@ router.get('/trafficpole/:trafficpole_id', function(req, res, next){
 		res.json(trafficPole);
 	});
 });
+
+/**
+ * GET /numtrafficpoles/ - get total number of traffic poles in database
+ * @param  {[type]} req                                               [description]
+ * @param  {[type]} res                                               [description]
+ * @param  {[type]} next(selector)									  [description]
+ * @return {[json]}                                                   [Total number of traffic poles in database]
+ */
+router.get('/numtrafficpoles/', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  	trafficPoleModel.count({}, function(err, data){
+  		if (err){ 
+			console.error("Error: Can not count traffic pole");
+			return next(err);
+		}
+		var totalNumber = data;
+		res.json(totalNumber);
+  	});
+});
+
 
 /**
  * GET /trafficpoles/ - get a group of traffic poles data by a group of trafficpoles_id
@@ -60,6 +97,38 @@ router.get('/trafficpoles/', function(req, res, next){
 			}
 		});
 	});
+});
+
+/**
+ * GET /trafficpolesbypage/ - get a group of traffic poles data by page and numItems
+ * @param  {[type]} req                  [description]
+ * @param  {[type]} res                  [description]
+ * @param  {[type]} next 				 [description]
+ */
+router.get('/trafficpolesbypage/', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  	var trafficPoles = [];
+  	var page = parseInt(req.query.page);
+  	var numItemsPerPage = parseInt(req.query.num_items_per_page);
+  	trafficPoleModel.paginate({}, {page: page, limit: numItemsPerPage}, function(err, result){
+		if (err){ 
+			console.error("Error: Can not load traffic pole at page = " + page + " and numItems = " + numItemsPerPage + err);
+			return next(err);
+		}  
+
+		var data = result.docs;
+		var count = 0;
+		data.forEach(function(trafficPole){
+			count++;
+			trafficPoles.push(trafficPole);
+
+			if (count == data.length){
+				res.json(trafficPoles);
+			}
+		});
+  	});
 });
 
 /**
@@ -185,15 +254,25 @@ router.delete('/trafficpole/:trafficpole_id', function(req, res, next){
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 	var trafficPoleId = req.params.trafficpole_id;
 
-	trafficPoleModel.findOneAndRemove({pole_id: trafficPoleId}, function(err, post){
+	trafficPoleModel.findOneAndRemove({pole_id: trafficPoleId}, function(err, post){	
 		if (err){
 			console.error("Error: occur while deleting traffic pole ! ");
 			console.error("Pole_id = " + trafficPoleId);
 			console.error(err);
-			return next(err);	
+
+			var responseData = {
+				status: 'failure',
+				message: 'Can not delete traffic pole pole_id = ' + trafficPoleId
+			};
+			res.json(responseData);
+
+			return next(err);
 		}
 
-		res.json('success!');
+		var responseData = {
+			status: 'success'
+		};
+		res.json(responseData);
 	});
 });
 // TRAFFIC POLE (END) ---------------------------------------
