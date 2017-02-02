@@ -26,20 +26,33 @@ var segmentViewModel = require('../models/SegmentViewModel');
 var mapUtils = require('../utils/MapUtils');
 
 /**
- * Get /segment/:segment_id  -  get information of a segment based on segment_id
- * @param  {[Object]}                     [description]
- * @param  {[Object]}                     [description]
- * @param  {[Object]}                     [description]
- * @return {[Json]}                       [description]
+ * Get /segment/:segment_id  -  get density information of a segment based on segment_id
+ * @param  {[segment_id]}                    [description]
+ * @return {[Json]}                       	 [success: density information
+ *                                            failure: message of error]
  */
 router.get('/segment/:segment_id', function(req, res, next){
+	var segmentId = req.params.segment_id;
+
 	// Get segment by segment_id
-	segment = global.AllSegments[req.params.segment_id];
+	segment = global.AllSegments[segmentId];
 
 	if (segment){
-		res.json(segment);
+		var responseData = {
+			status: 'success',
+			data: {
+				density_ste: segment.density_ste,
+				density_ets: segment.density_ets
+			}
+		};
+		res.json(responseData);
 	}
 	else{
+		var responseData = {
+			status: 'failure',
+			message: 'Segment not found: SegmentId = ' + segmentId
+		};
+		res.json(responseData);
 		return next("Err");
 	}
 });
