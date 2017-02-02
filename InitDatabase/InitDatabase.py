@@ -289,7 +289,7 @@ if __name__ == "__main__":
 	writeStreetAndSegmentFile(handler)
 
 	# IMPORT DATA TO DATABASE
-	os.system('mongoimport --db TrafficMap --collection nodes --file nodes.json --jsonArray')
-	os.system('mongoimport --db TrafficMap --collection segments --file segments.json --jsonArray')
-	os.system('mongoimport --db TrafficMap --collection cells --file cells.json --jsonArray')
-	os.system('mongoimport --db TrafficMap --collection streets --file streets.json --jsonArray')
+	#os.system('mongoimport --db TrafficMap --collection nodes --file nodes.json --jsonArray')
+	#os.system('mongoimport --db TrafficMap --collection segments --file segments.json --jsonArray')
+	#os.system('mongoimport --db TrafficMap --collection cells --file cells.json --jsonArray')
+	#os.system('mongoimport --db TrafficMap --collection streets --file streets.json --jsonArray')
