@@ -23,6 +23,7 @@ var density = require('./routes/density');
 var simulation = require('./routes/simulation');
 var quickSearch = require('./routes/quick-search');
 var statistic = require('./routes/statistic');
+var streets = require('./routes/streets');
 var app = express();
 // IMPORT ROUTES (END) ----------------------
 
@@ -46,6 +47,7 @@ app.use('/density', density);
 app.use('/simulation', simulation);
 app.use('/quicksearch', quickSearch);
 app.use('/statistic', statistic);
+app.use('/streets', streets);
 // SETTING ROUTES (END) ------------------------
 
 // SPECIAL CASE - ERROR 404 HANDLER
