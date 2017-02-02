@@ -53,11 +53,20 @@ router.get('/vehicles/street', function(req, res, next){
   	var streetName = req.query.street_name;
 
   	// Execute
-  	
+  	var date = new Date();
+    var UTCTime = Date.UTC(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(), 
+        date.getSeconds()
+    );
   	var responseData = {
 		status: 'success',
 		data: {
-			num_vehicles: Math.floor(Math.random() * 50)
+			num_vehicles: Math.floor(Math.random() * 50),
+			utc_time: UTCTime
 		}
 	};
 	res.json(responseData);
