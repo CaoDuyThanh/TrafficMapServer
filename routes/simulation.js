@@ -10,7 +10,6 @@ router.use(function(req, res, next) {
 	  	res.header("Access-Control-Allow-Origin", "*");
 		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
 		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		console.log('abs');
 		res.status(200);
 		res.end();
 	}
@@ -100,7 +99,7 @@ router.get('/trafficpoles/', function(req, res, next){
 });
 
 /**
- * GET /trafficpolesbypage/ - get a group of traffic poles data by page and numItems
+ * GET /trafficpolesbypage?page=?&num_items_per_page=? - get a group of traffic poles data by page and numItems
  * @param  {[type]} req                  [description]
  * @param  {[type]} res                  [description]
  * @param  {[type]} next 				 [description]
@@ -109,9 +108,12 @@ router.get('/trafficpolesbypage/', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 
-  	var trafficPoles = [];
+  	// Get inputs
   	var page = parseInt(req.query.page);
   	var numItemsPerPage = parseInt(req.query.num_items_per_page);
+
+  	// Execute
+  	var trafficPoles = [];
   	trafficPoleModel.paginate({}, {page: page, limit: numItemsPerPage}, function(err, result){
 		if (err){ 
 			console.error("Error: Can not load traffic pole at page = " + page + " and numItems = " + numItemsPerPage + err);
