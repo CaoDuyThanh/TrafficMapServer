@@ -60,10 +60,23 @@ router.get('/numtrafficpoles/', function(req, res, next){
   	trafficPoleModel.count({}, function(err, data){
   		if (err){ 
 			console.error("Error: Can not count traffic pole");
+
+			var responseData = {
+				status: 'failure',
+				message: 'Can not get number of traffic poles !'
+			};
+			res.json(responseData);
+
 			return next(err);
 		}
-		var totalNumber = data;
-		res.json(totalNumber);
+
+		var responseData = {
+			status: 'success',
+			data: {
+				num_traffic_poles: data
+			}
+		};
+		res.json(responseData);
   	});
 });
 
@@ -174,43 +187,55 @@ router.get('/alltrafficpoles/', function(req, res, next){
 router.post('/trafficpole/', function(req, res, next){
 	res.header("Access-Control-Allow-Origin", "*");
   	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  	console.log(req.body.data);
+
 	var newTrafficPole = JSON.parse(req.body.data);
+
+	console.log(newTrafficPole);
 	
 	trafficPoleModel.findOne({pole_id: newTrafficPole.pole_id}, function(err, data){
 		if (err){
 			console.error("Error: occur while checking traffic pole exist ! ");
 			console.error("Data = " + JSON.stringify(newTrafficPole));
 			console.error(err);
+
+			var responseData = {
+				status: 'failure',
+				message: 'Can not insert new traffic pole ! Database error !'
+			};
+			res.json(responseData);
+
 			return next(err);	
 		}
 
-		if (!data){
+		if (data) {		// Already has a traffic pole
+			var responseData = {
+				status: 'failure',
+				message: 'There is already a traffic pole with the same pole_id !'
+			};
+			res.json(responseData);
+		}else{			// Try to insert new traffic pole
 			trafficPoleModel.insertMany([newTrafficPole], function(err){
 				if (err){
 					console.error("Error: Can not insert traffic pole ! ");
 					console.error("Data = " + JSON.stringify(newTrafficPole));
 					console.error(err);
+
+					var responseData = {
+						status: 'failure',
+						message: 'Can not insert new traffic pole ! Database error !'
+					};
+					res.json(responseData);
+
 					return next(err);	
 				}
 
-				res.json('success!')
-			});
-		}else{
-			//console.log("Traffic pole exist !");
-			//console.log("Data = " + JSON.stringify(newTrafficPole));
-			//next(new Error('Traffic pole exist !'));
-			console.log("Update traffic pole!");
-			console.log("Data = " + JSON.stringify(newTrafficPole));
-			//next(new Error('Update traffic pole !'));
-			trafficPoleModel.findOneAndUpdate({pole_id: newTrafficPole.pole_id}, newTrafficPole, function(err, post){
-				if (err){
-					console.error("Error: occur while updating traffic pole ! ");
-					console.error("Pole_id = " + newTrafficPole.pole_id);
-					console.error(err);
-					return next(err);
-				}
-
-				res.json('update success!');
+				var responseData = {
+					status: 'success',
+					message: 'Create new traffic pole !'
+				};
+				res.json(responseData);
 			});
 		}
 	});
@@ -235,10 +260,21 @@ router.put('/trafficpole/', function(req, res, next){
 			console.error("Error: occur while updating traffic pole ! ");
 			console.error("Pole_id = " + trafficPoleId);
 			console.error(err);
+
+			var responseData = {
+				status: 'failure',
+				message: 'Can not update traffic pole ! Database error !'
+			};
+			res.json(responseData);
+
 			return next(err);
 		}
 
-		res.json('success!');
+		var responseData = {
+			status: 'success',
+			message: 'Update traffic pole !'
+		};
+		res.json(responseData);
 	});
 });
 
