@@ -43,5 +43,40 @@ router.get('/street', function(req, res, next){
 	res.json(responseData);
 });
 
+/**
+ * GET /quicksearch/getlocation?street_name=? - get location that contain street_name
+ * @param  {[type]} req       [description]
+ * @param  {[type]} res       [description]
+ * @param  {[type]} next      [description]
+ * @return {[type]}           [description]
+ */
+router.get('/getlocation', function(req, res, next){
+	res.header("Access-Control-Allow-Origin", "*");
+  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  	// Get inputs
+  	var streetName = req.query.street_name;
+
+  	// Execute
+  	var searchResult = global.AllStreetsDict.search(streetName);
+	var firstNElement = searchResult.slice(0, 1);	// Get the first result
+	var fullStreetName = firstNElement[0];
+	var allSegmentIds = global.AllStreetsName[fullStreetName].segments;
+	var randomSegmentId = allSegmentIds[Math.floor(Math.random() * allSegmentIds.length)];
+	var segment = global.AllSegments[randomSegmentId];
+	var lat = global.AllNodes[segment.node_start].node_lat;
+	var lon = global.AllNodes[segment.node_start].node_lon;
+
+  	var responseData = {
+		status: 'success',
+		data: {
+			street_name: fullStreetName,
+			lat: lat,
+			lon: lon
+		}
+	};
+	res.json(responseData);
+});
+
 
 module.exports = router;
