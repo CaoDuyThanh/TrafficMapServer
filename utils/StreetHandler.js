@@ -40,7 +40,7 @@ var LoadStreets = function(){
 					global.AllStreetsName[streetName].segments = [];
 				}
 
-				global.AllStreetsName[streetName].segments.push(street.segments);
+				global.AllStreetsName[streetName].segments = global.AllStreetsName[streetName].segments.concat(street.segments);
 			}			
 		});
 
