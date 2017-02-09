@@ -39,7 +39,7 @@ class FindSegmentInCell:
 		Output return True is segment throw cell have codinate is lonOfCell latOfCell
 		"""
 
-		# lon lat after convert to Float
+		# lon lat after convert to double
 		self.ACToFlonS = self.lonS * 100 + 9000
 		self.ACToFlatS = self.latS * 100 + 18000
 		self.ACToFlonE = self.lonE * 100 + 9000
@@ -137,16 +137,16 @@ class OSMContentHandler(xml.sax.ContentHandler):
 	def startElement(self, name, attrs):
 
 		if name == "bounds":
-			self.minlat = float(attrs.getValue("minlat"))
-			self.minlon = float(attrs.getValue("minlon"))
-			self.maxlat = float(attrs.getValue("maxlat"))
-			self.maxlon = float(attrs.getValue("maxlon"))
+			self.minlat = double(attrs.getValue("minlat"))
+			self.minlon = double(attrs.getValue("minlon"))
+			self.maxlat = double(attrs.getValue("maxlat"))
+			self.maxlon = double(attrs.getValue("maxlon"))
 
 		elif name == "node":
 			self.flag = self.FLAG_NODE
 			id = int(attrs.getValue("id"))
-			lat = float(attrs.getValue("lat"))
-			lon = float(attrs.getValue("lon"))
+			lat = double(attrs.getValue("lat"))
+			lon = double(attrs.getValue("lon"))
 			self.nodes.append([id, lat, lon])
 
 		elif name == "way":
@@ -184,7 +184,11 @@ def writeNodeFile(handler):
 	for i in xrange(len(handler.nodes)):
 		node = handler.nodes[i]
 		nodedict[node[0]] = [node[1],node[2]]
-		json.dump({'node_id': node[0], 'node_lat': node[1] , 'node_lon': node[2]},  nodeFile, indent=3)
+		json.dump({
+					'node_id': node[0], 
+					'lat': node[1] , 
+					'lon': node[2]},  
+				nodeFile, indent=3)
 		nodeFile.write(",")
 		nodeFile.write("\n")
 	nodeFile.seek(-2, os.SEEK_END)
@@ -224,24 +228,24 @@ def writeStreetAndSegmentFile(handler):
 			segmentID = street_id << 16 | nextSegment
 			node_start = findlocationnode(way[1][j])
 			node_end = findlocationnode(way[1][j+1])
-			listcell_id = FindSegmentInCell().findSegmetInCell(
-				float(node_start[1]),
-				float(node_start[0]),
-				float(node_end[1]),
-				float(node_end[0]))
-			json.dump({'timestamp': long(time.time()),
-				   'density_ste': 0,
-				   'velocity_ste': 0,
-				   'density_ets': 0,
-				   'velocity_ets': 0,
-				   'segment_id': segmentID, 
-				   'cells': listcell_id,
-				   'node_start': way[1][j], 
-				   'node_end': way[1][j+1], 
-				   'numCell': len(listcell_id)
-				  }, segmentFile, indent=4)
+			listcell_id = FindSegmentInCell().findSegmetInCell(double(node_start[1]),
+															   double(node_start[0]),
+															   double(node_end[1]),
+															   double(node_end[0]));
+			json.dump({
+				    'segment_id': segmentID,
+				    'node_start': way[1][j], 
+				   	'node_end': way[1][j+1],
+				   	'density': 0,
+				   	'velocity': 0,
+				   	'timestamp': long(time.time()),
+				   	'num_cell': len(listcell_id),
+				   	'cells': listcell_id,
+				   	'street_id': street_id
+				}, segmentFile, indent=4)
 			segmentFile.write(",")
 			segmentFile.write("\n")
+
 			for cell in listcell_id:
 				if celldict.get(cell,None) is None:
 					celldict[cell] = [segmentID]
@@ -255,12 +259,23 @@ def writeStreetAndSegmentFile(handler):
 				streetdict[street_id][0].append(segmentID)
 				streetdict[street_id][2] = nextSegment
 	for element in celldict:
-		json.dump({'cell_id': element, 'segments': celldict[element],'numSegment': len(celldict[element])}, cellFile, indent = 2)
+		json.dump({
+					'cell_id': element, 
+					'num_segment': len(celldict[element]),
+					'segments': celldict[element]
+				}, cellFile, indent = 2)
 		cellFile.write(",")
 		cellFile.write("\n")
 	for element in streetdict:
 		# if len(streetdict[element])==3:
-		json.dump({'street_id': element, 'segments':streetdict[element][0], 'type':streetdict[element][1],'nextSegment':streetdict[element][2],'name':streetdict[element][3]}, streetFile, indent = 5)
+		json.dump({
+					'street_id': element, 
+					'name':streetdict[element][3],
+					'type':streetdict[element][1],
+					'num_segment': len(streetdict[element][0]),
+					'segments':streetdict[element][0], 
+					'next_segment':streetdict[element][2]
+				}, streetFile, indent = 5)
 		# else:
 		# 	json.dump({'street_id': element, 'segments':streetdict[element][0], 'type':streetdict[element][1],'nextSegment':streetdict[element][2],'name':''}, streetFile, indent = 5)
 		streetFile.write(",")
@@ -289,7 +304,7 @@ if __name__ == "__main__":
 	writeStreetAndSegmentFile(handler)
 
 	# IMPORT DATA TO DATABASE
-	#os.system('mongoimport --db TrafficMap --collection nodes --file nodes.json --jsonArray')
-	#os.system('mongoimport --db TrafficMap --collection segments --file segments.json --jsonArray')
-	#os.system('mongoimport --db TrafficMap --collection cells --file cells.json --jsonArray')
-	#os.system('mongoimport --db TrafficMap --collection streets --file streets.json --jsonArray')
+	os.system('mongoimport --db TrafficMap --collection nodes --file nodes.json --jsonArray')
+	os.system('mongoimport --db TrafficMap --collection segments --file segments.json --jsonArray')
+	os.system('mongoimport --db TrafficMap --collection cells --file cells.json --jsonArray')
+	os.system('mongoimport --db TrafficMap --collection streets --file streets.json --jsonArray')
