@@ -17,8 +17,8 @@ var DistanceSegmentAndPos = function(segment, allNodes, pos){
 	var nodeEnd = allNodes[segment.node_end];
 
 	var midPoint = {};
-	midPoint.X = (nodeStart.node_lon + nodeEnd.node_lon) / 2;
-	midPoint.Y = (nodeStart.node_lat + nodeEnd.node_lat) / 2;
+	midPoint.X = (nodeStart.lon + nodeEnd.lon) / 2;
+	midPoint.Y = (nodeStart.lat + nodeEnd.lat) / 2;
 
 	var point = {};
 	point.X = pos.Lon;
@@ -57,11 +57,11 @@ var FindSegmentByGPS = function(allCells, allSegments, allNodes, gpsLocation){
 
 var CheckSameDirection = function(allNodes, segment, pointStart, pointEnd){
 	var pointA = {};
-	pointA.X = allNodes[segment.node_start].node_lon;
-	pointA.Y = allNodes[segment.node_start].node_lat;
+	pointA.X = allNodes[segment.node_start].lon;
+	pointA.Y = allNodes[segment.node_start].lat;
 	var pointB = {};
-	pointB.X = allNodes[segment.node_end].node_lon;
-	pointB.Y = allNodes[segment.node_end].node_lat;
+	pointB.X = allNodes[segment.node_end].lon;
+	pointB.Y = allNodes[segment.node_end].lat;
 	var pointC = {};
 	pointC.X = pointStart.lon;
 	pointC.Y = pointStart.lat;
