@@ -87,7 +87,17 @@
 								"LineCap" : "round",
 								"Opacity" : 1.0
 								}
-				}
+				},
+		"MapLevelStreetLevel": {
+			"moorway":   	1,
+			"trunk": 		2,
+			"primary": 		3,
+			"secondary":	4,
+			"tertiary": 	5,
+			"unclassified": 6,
+			"residential": 	7,
+			"service":		8
+		}
 
 	}
 }
