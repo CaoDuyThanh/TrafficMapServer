@@ -5,8 +5,8 @@ var schemaTypes = mongoose.Schema.Types;
 var NodeSchema = new mongoose.Schema({
   _id: schemaTypes.ObjectId,
   node_id: Number,
-  node_lon: Number,
-  node_lat: Number
+  lon: Number,
+  lat: Number
 });
 
 module.exports = mongoose.model('node', NodeSchema);
