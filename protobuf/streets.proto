@@ -9,11 +9,9 @@ message Segment{
 	int64 segment_id = 1;
 	LatLon node_start = 2;
 	LatLon node_end = 3;
-	int32 density_ste = 4;
-	int32 velocity_ste = 5;
-	int32 density_ets = 6;
-	int32 velocity_ets = 7;
-	string weather = 8;
+	int32 density = 4;
+	int32 velocity = 5;
+	string weather = 6;
 }
 message Street{
 	int64 street_id = 1;
