@@ -1,0 +1,15 @@
+package DensityStreetsLight;
+syntax = "proto3";
+
+message PointLight{
+	double lat = 1;
+	double lon = 2;
+	int32 dens = 3;
+	int32 velo = 4;
+}
+message StreetLight{
+	repeated PointLight points = 1;
+}
+message DensityStreetsLight{
+	repeated StreetLight streets = 1;
+}

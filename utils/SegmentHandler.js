@@ -65,10 +65,8 @@ var	StartRecordSegment = function(){
 				Object.keys(global.AllSegments).forEach(function(key){
 					var segment = global.AllSegments[key];
 					var model = {};
-					model["density_ste." + currentHour + "." + currentMinute] = segment.density_ste;
-					model["velocity_ste." + currentHour + "." + currentMinute] = segment.velocity_ste;
-					model["density_ets." + currentHour + "." + currentMinute] = segment.density_ets;
-					model["velocity_ets." + currentHour + "." + currentMinute] = segment.velocity_ets;
+					model["density." + currentHour + "." + currentMinute] = segment.density;
+					model["velocity." + currentHour + "." + currentMinute] = segment.velocity;
 
 					bulk.find({"_id":segment._id}).upsert().updateOne({
 						$set:model

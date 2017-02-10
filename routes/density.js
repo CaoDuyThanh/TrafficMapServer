@@ -3,8 +3,12 @@ var express = require('express');
 var router = express.Router();
 var fs = require('fs');
 var long = require('long');
-var protobuf = require("protobufjs");
-var byteBuffer = require("bytebuffer");
+var protobuf = require('protobufjs');
+var byteBuffer = require('bytebuffer');
+
+// IMPORT MAP CONFIG
+var config = require('../configuration');
+var mapConfig = config.MapConfig;
 
 // CREATE PROTOCOL BUFFER
 protobuf.convertFieldsToCamelCase = false;
@@ -13,10 +17,24 @@ var streetProto;
 var segmentProto;
 var latlonProto;
 protobuf.load('./protobuf/streets.proto', function(err, root){
-	densityStreetsProto = root.lookup("DensityStreets.DensityStreets");
-	streetProto = root.lookup("DensityStreets.Street");
-	segmentProto = root.lookup("DensityStreets.Segment");
-	latlonProto = root.lookup("DensityStreets.LatLon");
+	if (err) {
+		console.log('Can not load streets.proto');
+	}
+	densityStreetsProto = root.lookup('DensityStreets.DensityStreets');
+	streetProto = root.lookup('DensityStreets.Street');
+	segmentProto = root.lookup('DensityStreets.Segment');
+	latlonProto = root.lookup('DensityStreets.LatLon');
+});
+
+var densityStreetsLightProto;
+var pointLightProto;
+protobuf.load('./protobuf/streets_light.proto', function(err, root){
+	if (err) {
+		console.log('Can not load streets_light.proto');
+	}
+	densityStreetsLightProto = root.lookup('DensityStreetsLight.DensityStreetsLight');
+	streetLightProto = root.lookup('DensityStreetsLight.StreetLight');
+	pointLightProto = root.lookup('DensityStreetsLight.PointLight');
 });
 
 // IMPORT VIEW MODEL
@@ -41,8 +59,7 @@ router.get('/segment/:segment_id', function(req, res, next){
 		var responseData = {
 			status: 'success',
 			data: {
-				density_ste: segment.density_ste,
-				density_ets: segment.density_ets
+				density: segment.density
 			}
 		};
 		res.json(responseData);
@@ -53,7 +70,7 @@ router.get('/segment/:segment_id', function(req, res, next){
 			message: 'Segment not found: SegmentId = ' + segmentId
 		};
 		res.json(responseData);
-		return next("Err");
+		return next('Err');
 	}
 });
 
@@ -66,8 +83,8 @@ router.get('/segment/:segment_id', function(req, res, next){
  * @return {[Json]}                       [description]
  */
 router.get('/street/:street_id', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   
 	var street = global.AllStreets[req.params.street_id];
 	if (street){
@@ -90,6 +107,120 @@ router.get('/street/:street_id', function(req, res, next){
 	}
 });
 
+function latlonToCellId(lat, lon) {
+	lon = Math.floor(lon * 100) + 9000;
+	lat = Math.floor(lat * 100) + 18000;
+	return lon << 16 | lat;
+}
+
+function getListSegmentsByStreetType(latStart, latEnd, lonStart, lonEnd, streetType) {
+	var listCellIds = [];
+	for (var lat = latStart; lat <= latEnd; lat += 0.01) {
+		for (var lon = lonStart; lon <= lonEnd; lon += 0.01) {
+			var cellId = latlonToCellId(lat, lon);
+			listCellIds.push(cellId);
+		}
+	}
+
+	var listSegmentIds = [];
+	var streetTypeLevel = mapConfig.MapLevelStreetLevel[streetType];
+	listCellIds.forEach((cellId) => {
+		var cell = global.AllCells[cellId];
+
+		if (cell) {
+			cell.segments.forEach((segmentId) => {
+				var segment = global.AllSegments[segmentId];
+				var streetId = segment.street_id;
+				var street = global.AllStreets[streetId];			
+				var streetLevel = mapConfig.MapLevelStreetLevel[street.type];
+
+				if (streetLevel <= streetTypeLevel) {
+					listSegmentIds.push(segmentId);
+				}
+			});
+		}
+	});
+
+	listSegmentIds.sort((a, b) => a < b);
+	return listSegmentIds;
+}
+
+
+/**
+ * Get /density/streetslightpbf?cell_id=?&street_type=?  -  get density of light streets in cell_id which filtered by street_type
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @param  {[Object]}                     [description]
+ * @return {[protobuffer]}                [Data will be encode and send back to client by using protocol buffer]
+ */
+router.get('/streetslightpbf/', function(req, res, next){
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Parameters
+	var latStart = +req.query.lat_start;
+	var latEnd = +req.query.lat_end;
+	var lonStart = +req.query.lon_start;
+	var lonEnd = +req.query.lon_end;
+	var streetType = req.query.street_type;
+
+	listSegmentIds = getListSegmentsByStreetType(latStart, latEnd, lonStart, lonEnd, streetType);
+
+	var streetsRes = densityStreetsLightProto.create({ 
+  														streets: [] 
+													});
+
+  	var lastSegment = null;
+  	var streetLight = null;
+  	var nodeStart;
+  	var nodeEnd;
+	listSegmentIds.forEach((segmentId) => {
+  		var segment = global.AllSegments[segmentId];
+		if (!lastSegment || +segmentId != +lastSegment.segment_id + 1) {
+			if (streetLight) {
+				streetsRes.streets.push(streetLight);
+				streetLight = null;
+			}
+
+			streetLight = streetLightProto.create({
+									  				points: []
+									  			});
+			nodeStart = global.AllNodes[segment.node_start];
+			nodeEnd =  global.AllNodes[segment.node_end];
+			streetLight.points.push(pointLightProto.create({
+					  					lat : nodeStart.lat,					// lat start
+										lon : nodeStart.lon,					// lon start
+										dens : segment.density,					// density
+										velo : segment.velocity,				// velocity
+						  			}));
+			streetLight.points.push(pointLightProto.create({
+						  				lat : nodeEnd.lat,						// lat start
+										lon : nodeEnd.lon,						// lon start
+										dens : segment.density,					// density
+										velo : segment.velocity,				// velocity
+						  			}));
+		} else {
+			nodeEnd =  global.AllNodes[segment.node_end];
+  			streetLight.points.push(pointLightProto.create({
+						  				lat : nodeEnd.lat,						// lat start
+										lon : nodeEnd.lon,						// lon start
+										dens : segment.density,					// density
+										velo : segment.velocity,				// velocity
+						  			}));
+		}
+		lastSegment = segment;	
+  	});
+
+	if (streetLight) {
+		streetsRes.streets.push(streetLight);
+	}
+
+  	// Send buffer to client
+  	var buffer = densityStreetsLightProto.encode(streetsRes).finish();
+	res.send(buffer);
+});
+
+
 
 /**
  * Get /streetspbf/  -  get information of a group of segments of a group of streets
@@ -99,13 +230,15 @@ router.get('/street/:street_id', function(req, res, next){
  * @return {[protobuffer]}                [Data will be encode and send back to client by using protocol buffer]
  */
 router.get('/streetspbf/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Parameters
+	var streetIds = req.query.streetIds;
 
   	var streetsRes = densityStreetsProto.create({
   													streets: []
-  												});
-  	var streetIds = req.query.streetIds;
+  												});  	
   	var count1 = 0;
   	for (var idx = 0; idx < streetIds.length; idx++){
   		var streetId = streetIds[idx];
@@ -122,21 +255,19 @@ router.get('/streetspbf/', function(req, res, next){
 				var nodeEnd = global.AllNodes[segment.node_end];		
 				
 				var nodeStartRes = latlonProto.create({
-														lon: nodeStart.node_lon,
-														lat: nodeStart.node_lat
+														lon: nodeStart.lon,
+														lat: nodeStart.lat
 													});
 				var nodeEndRes = latlonProto.create({
-														lon: nodeEnd.node_lon,
-														lat: nodeEnd.node_lat
+														lon: nodeEnd.lon,
+														lat: nodeEnd.lat
 													});				
 				var segmentRes = segmentProto.create({
 														segmentId: segment_id,
 														nodeStart: nodeStartRes,
 														nodeEnd: nodeEndRes,
-														densitySte: segment.density_ste,
-														velocitySte: segment.velocity_ste,
-														densityEts: segment.density_ets,
-														velocityEts: segment.velocity_ets,
+														density: segment.density,
+														velocity: segment.velocity,
 														weather: 'NaN'
 													});
 				streetRes.segments[count2] = segmentRes;
@@ -160,8 +291,8 @@ router.get('/streetspbf/', function(req, res, next){
  * @param  {[Object]}                     [description]
  */
 router.get('/streets/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   	
   	var streets = {};
   	var streetIds = req.query.streetIds;
@@ -211,7 +342,7 @@ router.get('/cell/:cell_id', function(req, res, next){
 		});
 	}
 	else{
-		return next("Err");
+		return next('Err');
 	}
 });
 
@@ -233,11 +364,11 @@ function updateSegment(allSegments, unknownSegment){
 		var info = uSeg_Info[idx];
 		if ((info.Direction === 1 && isSameDirection === true) || 
 			(info.Direction === 2 && isSameDirection === false)){
-			segment.density_ste = info.Density;
-			segment.velocity_ste = info.Velocity;
+			segment.density = info.Density;
+			segment.velocity = info.Velocity;
 		}else{
-			segment.density_ets = info.Density;
-			segment.velocity_ets = info.Velocity;
+			segment.density = info.Density;
+			segment.velocity = info.Velocity;
 		}
 	}
 }
@@ -255,7 +386,7 @@ router.post('/segments/', function(req, res, next){
 		updateSegment(global.AllSegments, segment);
 	});
 
-	res.json("Success!");
+	res.json('Success!');
 });
 
 module.exports = router;
