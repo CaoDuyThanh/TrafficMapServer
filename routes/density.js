@@ -141,7 +141,7 @@ function getListSegmentsByStreetType(latStart, latEnd, lonStart, lonEnd, streetT
 		}
 	});
 
-	listSegmentIds.sort((a, b) => a < b);
+	listSegmentIds.sort();
 	return listSegmentIds;
 }
 
