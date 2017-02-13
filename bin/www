@@ -8,7 +8,8 @@ var cluster = require('cluster');
 var debug = require('debug')('trafficmapserver:server');
 var http = require('http');
 var config = require('../configuration');
-var serverConfig = config.ServerConfig
+var serverConfig = config.ServerConfig;
+
 
 if (cluster.isMaster) {
     console.log(`Master ${process.pid} is running`);
