@@ -1,6 +1,7 @@
 {
 	"Server":{
-		"Port": 4000
+		"Port": 4000,
+		"NumWorkers": 1
 	},
 	"Database":{
 		"DbType": "mongodb",
