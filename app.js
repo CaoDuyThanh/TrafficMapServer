@@ -2,6 +2,13 @@
 var config = require('./configuration.js');
 var dbConfig = config.DbConfig;
 
+// UTILITIES
+var cellHandler = require('./utils/CellHandler');
+var nodeHandler = require('./utils/NodeHandler');
+var segmentHandler = require('./utils/SegmentHandler');
+var streetHandler = require('./utils/StreetHandler');
+
+
 // IMPORT LIBRARY
 var express = require('express');
 var path = require('path');
@@ -10,14 +17,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
-// UTILITIES
-var cellHandler = require('./utils/CellHandler');
-var nodeHandler = require('./utils/NodeHandler');
-var segmentHandler = require('./utils/SegmentHandler');
-var streetHandler = require('./utils/StreetHandler');
-
 // IMPORT ROUTES ----------------------------
-var index = require('./routes/index');
 var segments = require('./routes/segments');
 var density = require('./routes/density');
 var simulation = require('./routes/simulation');
@@ -41,7 +41,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // SETTING ROUTES ------------------------------
-app.use('/', index);
 app.use('/segments', segments);
 app.use('/density', density);
 app.use('/simulation', simulation);
@@ -68,6 +67,7 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+
 // CONNECT TO DATABASE ---------------------------
 var mongoose = require('mongoose')
 mongoose.Promise = global.Promise;
@@ -76,8 +76,8 @@ mongoose.connect(dbConfig.DbType + "://" + dbConfig.HostName + "/" + dbConfig.Db
   .catch((err) => console.error(err))
 // CONNECT TO DATABASE (END) ---------------------
 
-// LOAD DATABASE ---------------------------------
 
+// LOAD DATABASE ---------------------------------
 // LOAD CELL FROM DATABASE
 cellHandler.LoadCells();
 
@@ -92,8 +92,6 @@ if (dbConfig.RecordHistory == true){
 
 // LOAD STREET FROM DATABASE
 streetHandler.LoadStreets();
-
 // LOAD DATABASE (END) ---------------------------
-
 
 module.exports = app;
