@@ -8,7 +8,6 @@ var nodeHandler = require('./utils/NodeHandler');
 var segmentHandler = require('./utils/SegmentHandler');
 var streetHandler = require('./utils/StreetHandler');
 
-
 // IMPORT LIBRARY
 var express = require('express');
 var path = require('path');
@@ -86,9 +85,9 @@ nodeHandler.LoadNodes();
 
 // LOAD CURRENT SEGMENT FROM DATABASE
 segmentHandler.LoadSegment();
-if (dbConfig.RecordHistory == true){
-  segmentHandler.StartRecordSegment();
-}
+// if (dbConfig.RecordHistory == true){
+//   segmentHandler.StartRecordSegment();
+// }
 
 // LOAD STREET FROM DATABASE
 streetHandler.LoadStreets();
