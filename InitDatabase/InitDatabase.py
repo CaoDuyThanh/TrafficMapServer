@@ -4,6 +4,7 @@ import os
 import os.path
 import json
 import time
+import pymongo
 from pymongo import MongoClient
 
 # SETTING IS HERE
@@ -39,7 +40,7 @@ class FindSegmentInCell:
 		Output return True is segment throw cell have codinate is lonOfCell latOfCell
 		"""
 
-		# lon lat after convert to double
+		# lon lat after convert to float
 		self.ACToFlonS = self.lonS * 100 + 9000
 		self.ACToFlatS = self.latS * 100 + 18000
 		self.ACToFlonE = self.lonE * 100 + 9000
@@ -137,16 +138,16 @@ class OSMContentHandler(xml.sax.ContentHandler):
 	def startElement(self, name, attrs):
 
 		if name == "bounds":
-			self.minlat = double(attrs.getValue("minlat"))
-			self.minlon = double(attrs.getValue("minlon"))
-			self.maxlat = double(attrs.getValue("maxlat"))
-			self.maxlon = double(attrs.getValue("maxlon"))
+			self.minlat = float(attrs.getValue("minlat"))
+			self.minlon = float(attrs.getValue("minlon"))
+			self.maxlat = float(attrs.getValue("maxlat"))
+			self.maxlon = float(attrs.getValue("maxlon"))
 
 		elif name == "node":
 			self.flag = self.FLAG_NODE
 			id = int(attrs.getValue("id"))
-			lat = double(attrs.getValue("lat"))
-			lon = double(attrs.getValue("lon"))
+			lat = float(attrs.getValue("lat"))
+			lon = float(attrs.getValue("lon"))
 			self.nodes.append([id, lat, lon])
 
 		elif name == "way":
@@ -206,6 +207,7 @@ def findlocationnode(node_id):
 #Content :Insert directly "node", "cell", "street" into mongodb
 #		 Export "segment" into .json file, and then import into mongodb   
 def writeStreetAndSegmentFile(handler):
+	segmentdict = {}
 	celldict = {}
 	streetdict = {}
 	segmentFile = open("segments.json", "wrb+")
@@ -226,12 +228,13 @@ def writeStreetAndSegmentFile(handler):
 			else:
 				street_name = ''
 			segmentID = street_id << 16 | nextSegment
+			segmentdict[segmentID] = street_id;
 			node_start = findlocationnode(way[1][j])
 			node_end = findlocationnode(way[1][j+1])
-			listcell_id = FindSegmentInCell().findSegmetInCell(double(node_start[1]),
-															   double(node_start[0]),
-															   double(node_end[1]),
-															   double(node_end[0]));
+			listcell_id = FindSegmentInCell().findSegmetInCell(float(node_start[1]),
+															   float(node_start[0]),
+															   float(node_end[1]),
+															   float(node_end[0]));
 			json.dump({
 				    'segment_id': segmentID,
 				    'node_start': way[1][j], 
@@ -259,10 +262,20 @@ def writeStreetAndSegmentFile(handler):
 				streetdict[street_id][0].append(segmentID)
 				streetdict[street_id][2] = nextSegment
 	for element in celldict:
+		streetTypes = {};
+		for segmentId in celldict[element]:
+			streetId = segmentdict[segmentId]
+			street = streetdict[streetId]
+			streetType = street[1]
+			if streetTypes.get(streetType,None) is None:
+				streetTypes[streetType] = [segmentId]
+			else:
+				streetTypes[streetType].append(segmentId);
 		json.dump({
 					'cell_id': element, 
 					'num_segment': len(celldict[element]),
-					'segments': celldict[element]
+					'segments': celldict[element],
+					'street_type': streetTypes
 				}, cellFile, indent = 2)
 		cellFile.write(",")
 		cellFile.write("\n")
@@ -303,8 +316,30 @@ if __name__ == "__main__":
 	writeNodeFile(handler)
 	writeStreetAndSegmentFile(handler)
 
+	# DROP OLD DATABASE
+	mongo = pymongo.MongoClient('localhost', 27017)
+	collection = mongo['TrafficMap']['nodes']
+	collection.drop();
+	collection = mongo['TrafficMap']['segments']
+	collection.drop();
+	collection = mongo['TrafficMap']['cells']
+	collection.drop();
+	collection = mongo['TrafficMap']['streets']
+	collection.drop();
+	
 	# IMPORT DATA TO DATABASE
 	os.system('mongoimport --db TrafficMap --collection nodes --file nodes.json --jsonArray')
 	os.system('mongoimport --db TrafficMap --collection segments --file segments.json --jsonArray')
 	os.system('mongoimport --db TrafficMap --collection cells --file cells.json --jsonArray')
 	os.system('mongoimport --db TrafficMap --collection streets --file streets.json --jsonArray')
+
+	# SET INDEX
+	mongo = pymongo.MongoClient('localhost', 27017)
+	collection = mongo['TrafficMap']['nodes']
+	collection.ensure_index('node_id', unique=True)
+	collection = mongo['TrafficMap']['segments']
+	collection.ensure_index('segment_id', unique=True)
+	collection = mongo['TrafficMap']['cells']
+	collection.ensure_index('cell_id', unique=True)
+	collection = mongo['TrafficMap']['streets']
+	collection.ensure_index('street_id', unique=True)
