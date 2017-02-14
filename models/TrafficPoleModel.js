@@ -21,8 +21,6 @@ var Camera = mongoose.Schema({
 	road: [LatLon]
 },{ _id : false });
 
-
-
 var TrafficPoleSchema = new mongoose.Schema({
 	_id: schemaTypes.ObjectId,
 	pole_id: Number,

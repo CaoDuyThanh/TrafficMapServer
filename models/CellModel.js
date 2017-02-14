@@ -7,7 +7,8 @@ var CellSchema = new mongoose.Schema({
   numSegment: Number,
   segments: [ schemaTypes.Long
   			],
-  cell_id: Number
+  cell_id: Number,
+  street_type: schemaTypes.Mixed
 });
 
 module.exports = mongoose.model('cell', CellSchema);

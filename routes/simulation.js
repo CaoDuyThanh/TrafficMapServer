@@ -2,14 +2,17 @@
 var express = require('express');
 var router = express.Router();
 
-// IMPORT VIEW MODEL
+// IMPORT SERVICE
+var simulationService = require('../service/simulation-service');
+
+// Load models
 var trafficPoleModel = require('../models/TrafficPoleModel');
 
 router.use(function(req, res, next) {
 	if (req.method === 'OPTIONS'){
-	  	res.header("Access-Control-Allow-Origin", "*");
+	  	res.header('Access-Control-Allow-Origin', '*');
 		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 		res.status(200);
 		res.end();
 	}
@@ -27,23 +30,27 @@ router.use(function(req, res, next) {
  * @param  {[type]} next 				 [description]
  */
 router.get('/trafficpole/:trafficpole_id', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   	// Get parameter
-  	var trafficpole_id = req.params.trafficpole_id;
+  	var trafficPoleId = req.params.trafficpole_id;
 
-  	var trafficPole = {};
-  	trafficPoleModel.findOne({pole_id: trafficpole_id}, function(err, data){
-		if (err){ 
-			console.error("Error: Can not load traffic pole by pole_id = " + trafficpole_id + " ! " + err);
-			return next(err);
-		}
+  	var promise = new Promise((resolve, reject) => simulationService.GetTrafficPole(trafficPoleId, resolve, reject));
+  	promise.then((data) => {
+		res.json(data);
+  	});
+  	promise.catch((err) => {
+		console.error('Error: Can not load traffic pole by pole_id = ' + trafficpole_id + ' ! ' + err);
 
-		trafficPole = data;
+		var responseData = {
+			status: 'failure',
+			message: 'Error: Can not load traffic pole by pole_id = ' + trafficpole_id + ' ! '
+		};
+		res.json(responseData);		
 
-		res.json(trafficPole);
-	});
+		return next(err);
+  	});
 });
 
 /**
@@ -54,22 +61,11 @@ router.get('/trafficpole/:trafficpole_id', function(req, res, next){
  * @return {[json]}                                                   [Total number of traffic poles in database]
  */
 router.get('/numtrafficpoles/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  	trafficPoleModel.count({}, function(err, data){
-  		if (err){ 
-			console.error("Error: Can not count traffic pole");
-
-			var responseData = {
-				status: 'failure',
-				message: 'Can not get number of traffic poles !'
-			};
-			res.json(responseData);
-
-			return next(err);
-		}
-
+	var promise = new Promise((resolve, reject) => simulationService.GetNumTrafficPoles(resolve, reject));  	
+	promise.then((data) => {
 		var responseData = {
 			status: 'success',
 			data: {
@@ -77,7 +73,18 @@ router.get('/numtrafficpoles/', function(req, res, next){
 			}
 		};
 		res.json(responseData);
-  	});
+	});
+	promise.catch((err) => {
+		console.error('Error: Can not count traffic pole');
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not get number of traffic poles !'
+		};
+		res.json(responseData);
+
+		return next(err);
+	});
 });
 
 
@@ -88,27 +95,31 @@ router.get('/numtrafficpoles/', function(req, res, next){
  * @param  {[type]} next 				 [description]
  */
 router.get('/trafficpoles/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  	var trafficPoles = [];
-  	var trafficPoleIds = req.query.trafficpole_ids;
-  	trafficPoleModel.find({pole_id: {$in: trafficPoleIds}}, function(err, data){
-		if (err){ 
-			console.error("Error: Can not load traffic pole by pole_id = " + trafficpole_id + " ! " + err);
-			return next(err);
-		}
+  	// Get parameters
+	var trafficPoleIds = req.query.trafficpole_ids;
 
-		var count = 0;
+  	var promise = new Promise((resolve, reject) => simulationService.GetTrafficPoles(trafficPoleIds, resolve, reject));
+  	promise.then((data) => {
+  		var trafficPoles = [];
 		data.forEach(function(trafficPole){
-			count++;
 			trafficPoles.push(trafficPole);
-
-			if (count == data.length){
-				res.json(trafficPoles);
-			}
 		});
-	});
+		res.json(trafficPoles);
+  	});
+  	promise.catch((err) => {
+		console.error('Error: Can not load traffic pole by pole_id = ' + trafficpole_id + ' ! ' + err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not get number of traffic poles !'
+		};
+		res.json(responseData);
+
+		return next(err);
+  	});
 });
 
 /**
@@ -118,31 +129,31 @@ router.get('/trafficpoles/', function(req, res, next){
  * @param  {[type]} next 				 [description]
  */
 router.get('/trafficpolesbypage/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  	// Get inputs
+  	// Get parameters
   	var page = parseInt(req.query.page);
   	var numItemsPerPage = parseInt(req.query.num_items_per_page);
 
-  	// Execute
-  	var trafficPoles = [];
-  	trafficPoleModel.paginate({}, {page: page, limit: numItemsPerPage}, function(err, result){
-		if (err){ 
-			console.error("Error: Can not load traffic pole at page = " + page + " and numItems = " + numItemsPerPage + err);
-			return next(err);
-		}  
-
-		var data = result.docs;
-		var count = 0;
+	var promise = new Promise((resolve, reject) => simulationService.GetTrafficPolesByPage(page, numItemsPerPage, resolve, reject));
+  	promise.then((data) => {
+  		var trafficPoles = [];
 		data.forEach(function(trafficPole){
-			count++;
 			trafficPoles.push(trafficPole);
-
-			if (count == data.length){
-				res.json(trafficPoles);
-			}
 		});
+		res.json(trafficPoles);
+  	});
+  	promise.catch((err) => {
+		console.error('Error: Can not load traffic pole at page = ' + page + ' and numItems = ' + numItemsPerPage + err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Error: Can not load traffic pole at page = ' + page + ' and numItems = ' + numItemsPerPage + ' !'
+		};
+		res.json(responseData);
+
+		return next(err);
   	});
 });
 
@@ -153,26 +164,28 @@ router.get('/trafficpolesbypage/', function(req, res, next){
  * @param  {[type]} next 				 [description]
  */
 router.get('/alltrafficpoles/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  	var trafficPoles = [];
-  	trafficPoleModel.find({}, function(err, data){
-		if (err){ 
-			console.error("Error: Can not load traffic pole by pole_id = " + trafficpole_id + " ! " + err);
-			return next(err);
-		}
-
-		var count = 0;
+	var promise = new Promise((resolve, reject) => simulationService.GetAllTrafficPoles(resolve, reject));
+  	promise.then((data) => {
+  		var trafficPoles = [];
 		data.forEach(function(trafficPole){
-			count++;
 			trafficPoles.push(trafficPole);
-			console.log(count);
-			if (count == data.length){
-				res.json(trafficPoles);
-			}
 		});
-	});
+		res.json(trafficPoles);
+  	});
+  	promise.catch((err) => {
+		console.error('Error: Can not load all traffic poles ! ' + err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Error: Can not load all traffic poles ! '
+		};
+		res.json(responseData);
+
+		return next(err);
+  	});
 });
 
 
@@ -185,59 +198,57 @@ router.get('/alltrafficpoles/', function(req, res, next){
  *         - error if traffic pole exist
  */
 router.post('/trafficpole/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  	console.log(req.body.data);
-
+  	// Get parameters
 	var newTrafficPole = JSON.parse(req.body.data);
+	var trafficPoleId = newTrafficPole.pole_id;
 
-	console.log(newTrafficPole);
-	
-	trafficPoleModel.findOne({pole_id: newTrafficPole.pole_id}, function(err, data){
-		if (err){
-			console.error("Error: occur while checking traffic pole exist ! ");
-			console.error("Data = " + JSON.stringify(newTrafficPole));
-			console.error(err);
-
-			var responseData = {
-				status: 'failure',
-				message: 'Can not insert new traffic pole ! Database error !'
-			};
-			res.json(responseData);
-
-			return next(err);	
-		}
-
-		if (data) {		// Already has a traffic pole
+	var promise = new Promise((resolve, reject) => simulationService.GetTrafficPole(trafficPoleId, resolve, reject));
+	promise.then((data) => {
+		if (data) {
 			var responseData = {
 				status: 'failure',
 				message: 'There is already a traffic pole with the same pole_id !'
 			};
 			res.json(responseData);
-		}else{			// Try to insert new traffic pole
-			trafficPoleModel.insertMany([newTrafficPole], function(err){
-				if (err){
-					console.error("Error: Can not insert traffic pole ! ");
-					console.error("Data = " + JSON.stringify(newTrafficPole));
-					console.error(err);
-
-					var responseData = {
-						status: 'failure',
-						message: 'Can not insert new traffic pole ! Database error !'
-					};
-					res.json(responseData);
-
-					return next(err);	
-				}
-
+		} else {
+			var promiseInsert = new Promise((resolve, reject) => simulationService.PostNewTrafficPole(newTrafficPole, resolve, reject));
+			promiseInsert.then((data) => {
 				var responseData = {
 					status: 'success',
 					message: 'Create new traffic pole !'
 				};
 				res.json(responseData);
 			});
+			promiseInsert.catch((err) => {
+				console.error('Error: Can not insert traffic pole ! ');
+				console.error('Data = ' + JSON.stringify(newTrafficPole));
+				console.error(err);
+
+				var responseData = {
+					status: 'failure',
+					message: 'Can not insert new traffic pole ! Database error !'
+				};
+				res.json(responseData);
+
+				return next(err);	
+			});
 		}
+	});
+	promise.catch((err) => {
+		console.error('Error: occur while checking traffic pole exist ! ');
+		console.error('Data = ' + JSON.stringify(newTrafficPole));
+		console.error(err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not insert new traffic pole ! Database error !'
+		};
+		res.json(responseData);
+
+		return next(err);
 	});
 });
 
@@ -247,34 +258,36 @@ router.post('/trafficpole/', function(req, res, next){
  * @param  {[type]} res               [description]
  * @param  {[type]} next){	var       updateTrafficPole [description]
  * @param  {[type]} updateTrafficPole [description]
- * @param  {String} function(err,     post){		if       (err){			console.error("Error: occur while updating traffic pole ! ");			console.error("Pole_id [description]
+ * @param  {String} function(err,     post){		if       (err){			console.error('Error: occur while updating traffic pole ! ');			console.error('Pole_id [description]
  * @return {[type]}                   [description]
  */
 router.put('/trafficpole/', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Get parameters
 	var updateTrafficPole = JSON.parse(req.body.data);
 
-	trafficPoleModel.findOneAndUpdate({pole_id: updateTrafficPole.pole_id}, updateTrafficPole, function(err, post){
-		if (err){
-			console.error("Error: occur while updating traffic pole ! ");
-			console.error("Pole_id = " + trafficPoleId);
-			console.error(err);
-
-			var responseData = {
-				status: 'failure',
-				message: 'Can not update traffic pole ! Database error !'
-			};
-			res.json(responseData);
-
-			return next(err);
-		}
-
+	var promise = new Promise((resolve, reject) => simulationService.UpdateTrafficPole(updateTrafficPole, resolve, reject));
+	promise.then((data) => {
 		var responseData = {
 			status: 'success',
 			message: 'Update traffic pole !'
 		};
 		res.json(responseData);
+	});
+	promise.catch((err) => {
+		console.error('Error: occur while updating traffic pole ! ');
+		console.error('Pole_id = ' + trafficPoleId);
+		console.error(err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not update traffic pole ! Database error !'
+		};
+		res.json(responseData);
+
+		return next(err);
 	});
 });
 
@@ -288,29 +301,31 @@ router.put('/trafficpole/', function(req, res, next){
  * @return {json}              [result of deleting]
  */
 router.delete('/trafficpole/:trafficpole_id', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Get parameters
 	var trafficPoleId = req.params.trafficpole_id;
 
-	trafficPoleModel.findOneAndRemove({pole_id: trafficPoleId}, function(err, post){	
-		if (err){
-			console.error("Error: occur while deleting traffic pole ! ");
-			console.error("Pole_id = " + trafficPoleId);
-			console.error(err);
-
-			var responseData = {
-				status: 'failure',
-				message: 'Can not delete traffic pole pole_id = ' + trafficPoleId
-			};
-			res.json(responseData);
-
-			return next(err);
-		}
-
+	var promise = new Promise((resolve, reject) => simulationService.DeleteTrafficPole(trafficPoleId, resolve, reject));
+	promise.then((data) => {
 		var responseData = {
 			status: 'success'
 		};
 		res.json(responseData);
+	});
+	promise.catch((err) => {
+		console.error('Error: occur while deleting traffic pole ! ');
+		console.error('Pole_id = ' + trafficPoleId);
+		console.error(err);
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not delete traffic pole pole_id = ' + trafficPoleId
+		};
+		res.json(responseData);
+
+		return next(err);
 	});
 });
 // TRAFFIC POLE (END) ---------------------------------------
