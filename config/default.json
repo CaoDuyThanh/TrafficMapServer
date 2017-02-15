@@ -9,8 +9,9 @@
 		"DbName": "TrafficMap",
 		"Port": 3000,
 
-		"RecordHistory": true,		// Auto record density map
-		"TimerRecord": 20				// every 5 minute
+		"RecordHistory": true,				// Auto record density map
+		"TimerRecord": 20,					// every 5 minute
+		"TimerCameraDensityUpdate": 30
 	},
 
 	"ClientMap":{
