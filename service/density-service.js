@@ -8,6 +8,7 @@ mongoose.Promise = require('bluebird');
 // Load models
 var segmentModel = require('../models/SegmentModel');
 var streetModel = require('../models/StreetModel');
+var segmentDensityModel = require('../models/SegmentDensityModel');
 
 /**
  * [GetDensityBySegmentIds - Get density based on a list of segmentId]
@@ -111,5 +112,87 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 	});
 }
 
+/**
+ * [GetDensitySegment - Get density segment]
+ * @param {[type]} segmentId    [description]
+ * @param {[type]} lowTimestamp [description]
+ */
+var GetDensitySegment = function(segmentId, lowTimestamp, resolve, reject) {
+	var promise = segmentDensityModel.aggregate([ 	{ "$match": { 'segment_id': segmentId } },
+												 	{ "$unwind": "$history" },
+												 	{ "$match": {
+												 					"history.timestamp": { $gte: lowTimestamp } 
+												 				}
+										 			},
+												 	{ "$group": {
+														    "_id": { "segment_id": "$segment_id",
+										 							 "density": "$density",
+										 							 "velocity": "$velocity"
+										 							},
+														    "history": { "$push": "$history" }
+														}
+													},
+													{ "$project": {
+															"_id": 0,
+														    "segment_id": "$_id.segment_id",
+								 							"density": "$_id.density",
+								 							"velocity": "$_id.velocity",
+								 							"history": 1
+														}
+													}
+												]).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not get density segment from database by segment_id = " + segmentId + " ! " + err);
+		return reject(err);
+	});
+}
+
+/**
+ * [PostDensitySegment - Post density information of a segment]
+ * @param {[type]} newDensitySegment [description]
+ * @param {[type]} resolve           [description]
+ * @param {[type]} reject            [description]
+ */
+var PostDensitySegment = function(newDensitySegment, resolve, reject) {
+	segmentDensityModel.insertMany([newDensitySegment], function(err, result) {
+		if (err) {
+			console.error("Error: Can not post density segment to database ! " + err);
+			return reject(err);
+		}
+
+		return resolve(result);
+	});
+}
+
+/**
+ * [UpdateDensitySegment - Update density information of a segment]
+ * @param {[type]} updateDensitySegment [description]
+ */
+var UpdateDensitySegment = function(updateDensitySegment, resolve, reject) {
+	var promise = segmentDensityModel.findOneAndUpdate({ 'segment_id': updateDensitySegment.segment_id }, updateDensitySegment).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not update density segment to database ! " + err);
+		return reject(err);
+	});	
+}
+
 module.exports.GetDensityBySegmentIds = GetDensityBySegmentIds;
 module.exports.GetDensityByStreetIds = GetDensityByStreetIds;
+
+module.exports.GetDensitySegment = GetDensitySegment;
+module.exports.PostDensitySegment = PostDensitySegment;
+module.exports.UpdateDensitySegment = UpdateDensitySegment;
