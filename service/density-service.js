@@ -90,8 +90,7 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 														    "segmentObjects.density": 1,
 														    "segmentObjects.velocity": 1
 														  } 
-											}
-											,											
+											},											
 											{ "$unwind": "$segmentObjects" },
 											{ "$group": {
 														    "_id": "$_id",
