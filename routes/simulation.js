@@ -2,10 +2,14 @@
 var express = require('express');
 var router = express.Router();
 
+// LOAD CONFIG
+var config = require('../configuration');
+var dbConfig = config.DbConfig;
+
 // IMPORT SERVICE
 var simulationService = require('../service/simulation-service');
 
-// Load models
+// LOAD MODELS
 var trafficPoleModel = require('../models/TrafficPoleModel');
 
 router.use(function(req, res, next) {
@@ -86,7 +90,6 @@ router.get('/numtrafficpoles/', function(req, res, next){
 		return next(err);
 	});
 });
-
 
 /**
  * GET /trafficpoles/ - get a group of traffic poles data by a group of trafficpoles_id
@@ -187,7 +190,6 @@ router.get('/alltrafficpoles/', function(req, res, next){
 		return next(err);
   	});
 });
-
 
 /**
  * POST /trafficpole/ - post a new traffic pole data
@@ -291,7 +293,6 @@ router.put('/trafficpole/', function(req, res, next){
 	});
 });
 
-
 /**
  * DELETE /trafficpole/:trafficpole_id  -  delete an exist traffic pole by trafficpole_id
  * @param  {[type]}            [description]
@@ -332,9 +333,6 @@ router.delete('/trafficpole/:trafficpole_id', function(req, res, next){
 
 
 // CAMERA ---------------------------------------------------
-
-
-
 // CAMERA (END) ---------------------------------------------
 
 
