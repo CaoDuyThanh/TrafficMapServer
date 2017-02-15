@@ -192,32 +192,99 @@ router.get('/streets/', function(req, res, next){
 
 
 // POST DENSITY OF A GROUP OF SEGMENT (FOUND BY SEGMENTID) ----------------------------------
-// function updateSegment(allSegments, unknownSegment){
-// 	// Get all information from segment
-// 	var uSeg_GPS_Start = unknownSegment.GPS_Start;
-// 	var uSeg_GPS_End = unknownSegment.GPS_End;
-// 	var uSeg_Info = unknownSegment.Info;
-// 	var uSeg_Time = unknownSegment.Time;
-// 	var uSeg_Weather = unknownSegment.Weather;
+function updateSegmentDensity(unknownSegment, resolve, reject){
+	// Get all information from segment
+	var uSeg_GPS_Start = unknownSegment.GPS_Start;
+	var uSeg_GPS_End = unknownSegment.GPS_End;
+	var uSeg_Info = unknownSegment.Info;
+	var uSeg_Time = unknownSegment.Time;
+	var uSeg_Weather = unknownSegment.Weather;
 
-// 	var uSeg_GPS_Mid = {};
-// 	uSeg_GPS_Mid.Lon = (uSeg_GPS_Start.Lon + uSeg_GPS_End.Lon) / 2;
-// 	uSeg_GPS_Mid.Lat = (uSeg_GPS_Start.Lat + uSeg_GPS_End.Lat) / 2;
-// 	var segment = mapUtils.FindSegmentByGPS(global.AllCells, global.AllSegments, global.AllNodes, uSeg_GPS_Mid);
+	var uSeg_GPS_Mid = {};
+	uSeg_GPS_Mid.Lon = (uSeg_GPS_Start.Lon + uSeg_GPS_End.Lon) / 2;
+	uSeg_GPS_Mid.Lat = (uSeg_GPS_Start.Lat + uSeg_GPS_End.Lat) / 2;
 
-// 	var isSameDirection = mapUtils.CheckSameDirection(global.AllNodes, segment, uSeg_GPS_Start, uSeg_GPS_End);
-// 	for (var idx = 0; idx < uSeg_Info.length; idx++){
-// 		var info = uSeg_Info[idx];
-// 		if ((info.Direction === 1 && isSameDirection === true) || 
-// 			(info.Direction === 2 && isSameDirection === false)){
-// 			segment.density = info.Density;
-// 			segment.velocity = info.Velocity;
-// 		}else{
-// 			segment.density = info.Density;
-// 			segment.velocity = info.Velocity;
-// 		}
-// 	}
-// }
+	var promiseSeg = new Promise((resolve, reject) => mapUtils.FindSegmentByGPS(uSeg_GPS_Mid, resolve, reject));
+	promiseSeg.then((segment) => {
+		if (segment === null) {
+			return resolve();
+		}
+
+		var isSameDirection = mapUtils.CheckSameDirection(segment, uSeg_GPS_Start, uSeg_GPS_End);
+		for (var idx = 0; idx < uSeg_Info.length; idx++){
+			var info = uSeg_Info[idx];
+			if ((info.Direction === 1 && isSameDirection === true) || 
+				(info.Direction === 2 && isSameDirection === false)){
+				segment.density = info.Density;
+				segment.velocity = info.Velocity;
+			}else{
+				segment.density = info.Density;
+				segment.velocity = info.Velocity;
+			}
+		}
+
+		var currentTimestamp = Date.now();
+		var lowTimestampe = currentTimestamp - dbConfig.TimerSegmentDensityUpdate * 60 * 1000;
+		var promiseGet = new Promise((resolve, reject) => densityService.GetDensitySegment(segment.segment_id, lowTimestampe, resolve, reject));
+		promiseGet.then((data) => {
+			var segmentDensity;
+			if (data.length === 0) {
+				// New camera density
+				segmentDensity = {};
+				segmentDensity.segment_id = segment.segment_id;
+				segmentDensity.history = [];
+				segmentDensity.history.push({
+					timestamp: currentTimestamp,
+					density: segment.density,
+					velocity: segment.velocity
+				});
+			} else {
+				segmentDensity = data[0];
+				segmentDensity.history.push({
+					timestamp: currentTimestamp,
+					density: segment.density,
+					velocity: segment.velocity
+				});
+			}
+			var history = segmentDensity.history;
+			var averDensity = 0;
+			var averVelocity = 0;
+			history.forEach((his) => {
+				averDensity += his.density;
+				averVelocity += his.velocity;
+			});
+			averDensity /= history.length;
+			averVelocity /= history.length;
+			segmentDensity.density = averDensity;
+			segmentDensity.velocity = averVelocity;
+
+			if (data.length === 0) {
+				var promisePost = new Promise((resolve, reject) => densityService.PostDensitySegment(segmentDensity, resolve, reject));
+				promisePost.then((data) => {
+					return resolve();
+				});
+				promisePost.catch((err) => {
+					return reject(err);
+				});
+			} else {
+				var promiseUpdate = new Promise((resolve, reject) => densityService.UpdateDensitySegment(segmentDensity, resolve, reject));
+				promiseUpdate.then((data) => {
+					return resolve();
+				});
+				promiseUpdate.catch((err) => {
+					return reject(err);
+				});
+			}
+		});
+		promiseGet.catch((err) => {
+			return reject(err);
+		});
+	});
+	promiseSeg.catch((err) => {
+		console.error('Error while get segment by GPS ! ', err);
+		return reject(err);
+	});	
+}
 /**
  * POST /density/segments  -  Handle POST request from client - update density of a list of segments
  * @param  {[Object]}                     [description]
@@ -225,21 +292,39 @@ router.get('/streets/', function(req, res, next){
  * @param  {[Object]}                     [description]
  */
 router.post('/segments/', function(req, res, next){
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
 	// Get parameters
-	segmentsRec = req.body.segment;
+	segments = req.body.segments;
 
-	// segmentsRec.forEach(function(segment){
-	// 	updateSegment(global.AllSegments, segment);
-	// });
+	var promiseAll = Promise.all(segments.map((segment) => {
+    	return new Promise((resolve, reject) => updateSegmentDensity(segment, resolve, reject));
+    }));
+    promiseAll.then((data) => {
+		var responseData = {
+			status: 'success',
+			message: 'Update density information successfully !'
+		};
+		res.json(responseData);    	
+    });
+    promiseAll.catch((err) => {
+    	console.error('Error: occur while updating density at some locations ! ', err);
 
-	res.json('Success!');
+		var responseData = {
+			status: 'failure',
+			message: 'Can not update density information ! Database error !'
+		};
+		res.json(responseData);
+
+		return next(err);
+    });
 });
 // POST DENSITY OF A GROUP OF SEGMENT (FOUND BY SEGMENTID) (END) ----------------------------
 
 
 // POST DENSITY OF A GROUP OF CAMERA (FOUND BY POLE_ID AND STREAM_ID) ----------------------------------
 function updateCameraDensity(camera, resolve, reject) {
-	console.log(camera);
 	var currentTimestamp = Date.now();
 	var lowTimestampe = currentTimestamp - dbConfig.TimerCameraDensityUpdate * 60 * 1000;
 	var promiseGet = new Promise((resolve, reject) => simulationService.GetDensityCamera(camera.pole_id, camera.stream_id, lowTimestampe, resolve, reject));
