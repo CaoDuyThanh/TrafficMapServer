@@ -7,6 +7,7 @@ mongoose.Promise = require('bluebird');
 
 // Load models
 var trafficPoleModel = require('../models/TrafficPoleModel');
+var cameraDensityModel = require('../models/CameraDensityModel');
 
 /**
  * [GetTrafficPole - Get traffic pole by trafficPoleId]
@@ -108,18 +109,13 @@ var GetNumTrafficPoles = function(resolve, reject) {
  * @param {[type]} newTrafficPole [description]
  */
 var PostNewTrafficPole = function(newTrafficPole, resolve, reject) {
-	var promise = trafficPoleModel.insertMany([newTrafficPole]).exec();
-
-	// Result
-	promise.then(function(result) {
+	trafficPoleModel.insertMany([newTrafficPole], function(err, result) {
+		if (err) {
+			console.error("Error: Can not count number of traffic poles from database ! " + err);
+			return reject(err);	
+		}
 		return resolve(result);
 	});
-
-	// Error
-	promise.catch(function(err) {
-		console.error("Error: Can not count number of traffic poles from database ! " + err);
-		return reject(err);
-	});	
 }
 
 /**
@@ -160,6 +156,91 @@ var DeleteTrafficPole = function(trafficPoleId, resolve, reject) {
 	});
 }
 
+/**
+ * [GetDensityCamera - Get density camera]
+ * @param {[type]} pole_id   [description]
+ * @param {[type]} stream_id [description]
+ */
+var GetDensityCamera = function(pole_id, stream_id, lowTimestamp, resolve, reject) {
+	var promise = cameraDensityModel.aggregate([ 	{ "$match": { 'pole_id': pole_id,
+															   	  'stream_id': stream_id 
+																} 
+												 	},
+												 	{ "$unwind": "$history" },
+												 	{ "$project": { 
+												 					"pole_id": 1,
+												 					"stream_id": 1,
+														    		"density": 1,
+												 					"history.density": 1,
+														            "history.timestamp": 1,
+														            "history.timestampp": { $gte: [ "$history.timestamp", lowTimestamp ] }
+												          		  }
+												 	},
+												 	{ "$group": {
+														    "_id": { "pole_id": "$pole_id",
+										 							 "stream_id": "$stream_id",
+										 							 "density": "$density",
+										 							},
+														    "history": { "$push": "$history" }
+														}
+													},
+													{ "$project": {
+															"_id": 0,
+														    "pole_id": "$_id.pole_id",
+								 							"stream_id": "$_id.stream_id",
+								 							"density": "$_id.density",
+								 							"history": 1
+														}
+													}
+												]).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not get density camera from database by pole_id = " + pole_id + " and stream_id = " + stream_id + " ! " + err);
+		return reject(err);
+	});
+}
+
+/**
+ * [PostDensityCamera - Post density information of a camera]
+ * @param {[type]} newDensityCamera [description]
+ */
+var PostDensityCamera = function(newDensityCamera, resolve, reject) {
+	cameraDensityModel.insertMany([newDensityCamera], function(err, result) {
+		if (err) {
+			console.error("Error: Can not post density camera to database ! " + err);
+			return reject(err);
+		}
+
+		return resolve(result);
+	});
+}
+
+/**
+ * [UpdateDensityCamera - Update density information of a camera]
+ * @param {[type]} updateDensityCamera [description]
+ */
+var UpdateDensityCamera = function(updateDensityCamera, resolve, reject) {
+	var promise = cameraDensityModel.findOneAndUpdate({ 'pole_id': updateDensityCamera.pole_id,
+														'stream_id': updateDensityCamera.stream_id }, updateDensityCamera).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not update density camera to database ! " + err);
+		return reject(err);
+	});	
+}
+
 module.exports.GetTrafficPole = GetTrafficPole;
 module.exports.GetTrafficPoles = GetTrafficPoles;
 module.exports.GetTrafficPolesByPage = GetTrafficPolesByPage;
@@ -169,3 +250,7 @@ module.exports.GetNumTrafficPoles = GetNumTrafficPoles;
 module.exports.PostNewTrafficPole = PostNewTrafficPole;
 module.exports.UpdateTrafficPole = UpdateTrafficPole;
 module.exports.DeleteTrafficPole = DeleteTrafficPole;
+
+module.exports.GetDensityCamera = GetDensityCamera;
+module.exports.PostDensityCamera = PostDensityCamera;
+module.exports.UpdateDensityCamera = UpdateDensityCamera;
