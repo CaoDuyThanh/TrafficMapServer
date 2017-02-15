@@ -160,6 +160,32 @@ router.get('/streetslightpbf/', function(req, res, next){
 		next(err);
 	});
 });
+
+/**
+ * Get /streets/  -  get information of a group of segments of a group of streets
+ * @param  {[Array[number]]}                   [Array of number represent street_id]
+ * @param  {[JSON]}                     	   [A json file where each street was a group of segments]
+ */
+router.get('/streets/', function(req, res, next){
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  	
+  	// Get parameters
+  	var streetIds = req.query.streetIds;
+  	streetIds = streetIds.map((streetId) => {return +streetId});
+
+	// Execute
+	// Get all streets by list of streetIds
+	var promise = new Promise((resolve, reject) => densityService.GetDensityByStreetIds(streetIds, resolve, reject));
+	promise.then((streets) => {
+		res.json(streets);
+	});
+	promise.catch((err) => {
+		console.log('Promise error: ', err);
+		next(err);
+	});
+});
+
 // GET DENSITY OF STREET | GROUP OF STREETS BASED ON STREET_ID (END) ------------------------
 
 
