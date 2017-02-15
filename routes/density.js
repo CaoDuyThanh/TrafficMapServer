@@ -9,6 +9,7 @@ var byteBuffer = require('bytebuffer');
 // IMPORT MAP CONFIG
 var config = require('../configuration');
 var mapConfig = config.MapConfig;
+var dbConfig = config.DbConfig;
 
 // IMPORT VIEW MODEL
 var segmentViewModel = require('../models/SegmentViewModel');
@@ -22,6 +23,7 @@ var streetService = require('../service/street-service');
 var nodeService = require('../service/node-service');
 var segmentService = require('../service/segment-service');
 var densityService = require('../service/density-service');
+var simulationService = require('../service/simulation-service');
 
 // GET DENSITY OF STREET | GROUP OF STREETS BASED ON STREET_ID ------------------------------
 // Create protobuffer
@@ -222,16 +224,105 @@ router.get('/streets/', function(req, res, next){
  * @param  {[Object]}                     [description]
  * @param  {[Object]}                     [description]
  */
-// router.post('/segments/', function(req, res, next){
-// 	// Parse json data
-// 	segmentsRec = req.body.segment;
-// 	segmentsRec.forEach(function(segment){
-// 		updateSegment(global.AllSegments, segment);
-// 	});
+router.post('/segments/', function(req, res, next){
+	// Get parameters
+	segmentsRec = req.body.segment;
 
-// 	res.json('Success!');
-// });
+	// segmentsRec.forEach(function(segment){
+	// 	updateSegment(global.AllSegments, segment);
+	// });
+
+	res.json('Success!');
+});
 // POST DENSITY OF A GROUP OF SEGMENT (FOUND BY SEGMENTID) (END) ----------------------------
+
+
+// POST DENSITY OF A GROUP OF CAMERA (FOUND BY POLE_ID AND STREAM_ID) ----------------------------------
+function updateCameraDensity(camera, resolve, reject) {
+	console.log(camera);
+	var currentTimestamp = Date.now();
+	var lowTimestampe = currentTimestamp - dbConfig.TimerCameraDensityUpdate * 60 * 1000;
+	var promiseGet = new Promise((resolve, reject) => simulationService.GetDensityCamera(camera.pole_id, camera.stream_id, lowTimestampe, resolve, reject));
+	promiseGet.then((data) => {
+		var cameraDensity;
+		if (data.length === 0) {
+			// New camera density
+			cameraDensity = {};
+			cameraDensity.pole_id = camera.pole_id;
+			cameraDensity.stream_id = camera.stream_id;
+			cameraDensity.history = [];
+			cameraDensity.history.push({
+				timestamp: currentTimestamp,
+				density: camera.density
+			});
+		} else {
+			cameraDensity = data[0];
+			cameraDensity.history.push({
+				timestamp: currentTimestamp,
+				density: camera.density
+			});
+		}
+		var history = cameraDensity.history;
+		var averDensity = 0;
+		history.forEach((his) => {
+			averDensity += his.density;
+		});
+		averDensity /= history.length;
+		cameraDensity.density = averDensity;
+
+		if (data.length === 0) {
+			var promisePost = new Promise((resolve, reject) => simulationService.PostDensityCamera(cameraDensity, resolve, reject));
+			promisePost.then((data) => {
+				return resolve();
+			});
+			promisePost.catch((err) => {
+				return reject(err);
+			});
+		} else {
+			var promiseUpdate = new Promise((resolve, reject) => simulationService.UpdateDensityCamera(cameraDensity, resolve, reject));
+			promiseUpdate.then((data) => {
+				return resolve();
+			});
+			promiseUpdate.catch((err) => {
+				return reject(err);
+			});
+		}
+	});
+	promiseGet.catch((err) => {
+		return reject(err);
+	});
+}
+router.post('/cameras/', function(req, res, next) {
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Get parameters
+  	var cameras = req.body.cameras;
+	
+    var promiseAll = Promise.all(cameras.map((camera) => {
+    	return new Promise((resolve, reject) => updateCameraDensity(camera, resolve, reject));
+    }));
+    promiseAll.then((data) => {
+		var responseData = {
+			status: 'success',
+			message: 'Update density information successfully !'
+		};
+		res.json(responseData);    	
+    });
+    promiseAll.catch((err) => {
+    	console.error('Error: occur while updating camera density ! ');
+
+		var responseData = {
+			status: 'failure',
+			message: 'Can not update density information ! Database error !'
+		};
+		res.json(responseData);
+
+		return next(err);
+    });
+})
+// POST DENSITY OF A GROUP OF CAMERA (FOUND BY POLE_ID AND STREAM_ID) (END) ----------------------------
+
 
 
 module.exports = router;
