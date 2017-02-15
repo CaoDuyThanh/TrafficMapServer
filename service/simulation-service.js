@@ -158,24 +158,20 @@ var DeleteTrafficPole = function(trafficPoleId, resolve, reject) {
 
 /**
  * [GetDensityCamera - Get density camera]
- * @param {[type]} pole_id   [description]
- * @param {[type]} stream_id [description]
+ * @param {[type]} poleId   	[description]
+ * @param {[type]} streamId 	[description]
+ * @param {[type]} lowTimestamp [description]
  */
-var GetDensityCamera = function(pole_id, stream_id, lowTimestamp, resolve, reject) {
-	var promise = cameraDensityModel.aggregate([ 	{ "$match": { 'pole_id': pole_id,
-															   	  'stream_id': stream_id 
+var GetDensityCamera = function(poleId, streamId, lowTimestamp, resolve, reject) {
+	var promise = cameraDensityModel.aggregate([ 	{ "$match": { 'pole_id': poleId,
+															   	  'stream_id': streamId 
 																} 
 												 	},
 												 	{ "$unwind": "$history" },
-												 	{ "$project": { 
-												 					"pole_id": 1,
-												 					"stream_id": 1,
-														    		"density": 1,
-												 					"history.density": 1,
-														            "history.timestamp": 1,
-														            "history.timestampp": { $gte: [ "$history.timestamp", lowTimestamp ] }
-												          		  }
-												 	},
+												 	{ "$match": {
+												 					"history.timestamp": { $gte: lowTimestamp } 
+												 				}
+										 			},
 												 	{ "$group": {
 														    "_id": { "pole_id": "$pole_id",
 										 							 "stream_id": "$stream_id",
@@ -201,7 +197,7 @@ var GetDensityCamera = function(pole_id, stream_id, lowTimestamp, resolve, rejec
 
 	// Error
 	promise.catch(function(err) {
-		console.error("Error: Can not get density camera from database by pole_id = " + pole_id + " and stream_id = " + stream_id + " ! " + err);
+		console.error("Error: Can not get density camera from database by pole_id = " + poleId + " and stream_id = " + streamId + " ! " + err);
 		return reject(err);
 	});
 }
@@ -238,7 +234,7 @@ var UpdateDensityCamera = function(updateDensityCamera, resolve, reject) {
 	promise.catch(function(err) {
 		console.error("Error: Can not update density camera to database ! " + err);
 		return reject(err);
-	});	
+	});
 }
 
 module.exports.GetTrafficPole = GetTrafficPole;
