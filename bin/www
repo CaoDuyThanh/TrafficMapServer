@@ -3,6 +3,9 @@
 /**
  * Module dependencies.
  */
+// LOAD CONFIG
+var config = require('../configuration.js');
+var dbConfig = config.DbConfig;
 
 var cluster = require('cluster');
 var debug = require('debug')('trafficmapserver:server');
@@ -10,8 +13,9 @@ var http = require('http');
 var config = require('../configuration');
 var serverConfig = config.ServerConfig;
 
-
 if (cluster.isMaster) {
+    require('../record-app.js');
+
     console.log(`Master ${process.pid} is running`);
 
     // Count the machine's CPUs
