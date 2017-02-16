@@ -3,9 +3,6 @@ var config = require('./configuration.js');
 var dbConfig = config.DbConfig;
 
 // UTILITIES
-var cellHandler = require('./utils/CellHandler');
-var nodeHandler = require('./utils/NodeHandler');
-var segmentHandler = require('./utils/SegmentHandler');
 var streetHandler = require('./utils/StreetHandler');
 
 // IMPORT LIBRARY
