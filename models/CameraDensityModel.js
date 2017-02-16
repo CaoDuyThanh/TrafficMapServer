@@ -16,4 +16,6 @@ var CameraDensitySchema = new mongoose.Schema({
 	history: [HistorySchema]
 });
 
+CameraDensitySchema.index({ pole_id: 1, stream_id: 1}, {unique: true});
+
 module.exports = mongoose.model('camera_density', CameraDensitySchema);
