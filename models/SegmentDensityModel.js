@@ -8,7 +8,6 @@ var HistorySchema = new mongoose.Schema({
 	velocity: Number
 },{ _id : false });
 
-
 var SegmentDensitySchema = new mongoose.Schema({
 	_id: schemaTypes.ObjectId,
 	segment_id: Number,
@@ -16,5 +15,7 @@ var SegmentDensitySchema = new mongoose.Schema({
 	velocity: Number,
 	history: [HistorySchema]
 });
+
+SegmentDensitySchema.index({ segment_id: 1 }, {unique: true});
 
 module.exports = mongoose.model('segment_density', SegmentDensitySchema);
