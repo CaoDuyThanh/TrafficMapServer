@@ -8,6 +8,7 @@ mongoose.Promise = require('bluebird');
 // Load models
 var trafficPoleModel = require('../models/TrafficPoleModel');
 var cameraDensityModel = require('../models/CameraDensityModel');
+var cameraDensityHistoryModel = require('../models/CameraDensityHistoryModel');
 
 /**
  * [GetTrafficPole - Get traffic pole by trafficPoleId]
@@ -162,7 +163,7 @@ var DeleteTrafficPole = function(trafficPoleId, resolve, reject) {
  * @param {[type]} streamId 	[description]
  * @param {[type]} lowTimestamp [description]
  */
-var GetDensityCamera = function(poleId, streamId, lowTimestamp, resolve, reject) {
+var GetCameraDensity = function(poleId, streamId, lowTimestamp, resolve, reject) {
 	var promise = cameraDensityModel.aggregate([ 	{ "$match": { 'pole_id': poleId,
 															   	  'stream_id': streamId 
 																} 
@@ -204,12 +205,13 @@ var GetDensityCamera = function(poleId, streamId, lowTimestamp, resolve, reject)
 
 /**
  * [PostDensityCamera - Post density information of a camera]
- * @param {[type]} newDensityCamera [description]
+ * @param {[type]} newCameraDensity [description]
  */
-var PostDensityCamera = function(newDensityCamera, resolve, reject) {
-	cameraDensityModel.insertMany([newDensityCamera], function(err, result) {
+var PostCameraDensity = function(newCameraDensity, resolve, reject) {
+	console.log(newCameraDensity);
+	cameraDensityModel.insertMany([newCameraDensity], function(err, result) {
 		if (err) {
-			console.error("Error: Can not post density camera to database ! " + err);
+			console.error("Error: Can not post camera density to database ! " + err);
 			return reject(err);
 		}
 
@@ -218,12 +220,12 @@ var PostDensityCamera = function(newDensityCamera, resolve, reject) {
 }
 
 /**
- * [UpdateDensityCamera - Update density information of a camera]
- * @param {[type]} updateDensityCamera [description]
+ * [updateCameraDensity - Update density information of a camera]
+ * @param {[type]} updateCameraDensity [description]
  */
-var UpdateDensityCamera = function(updateDensityCamera, resolve, reject) {
-	var promise = cameraDensityModel.findOneAndUpdate({ 'pole_id': updateDensityCamera.pole_id,
-														'stream_id': updateDensityCamera.stream_id }, updateDensityCamera).exec();
+var UpdateCameraDensity = function(updateCameraDensity, resolve, reject) {
+	var promise = cameraDensityModel.findOneAndUpdate({ 'pole_id': updateCameraDensity.pole_id,
+														'stream_id': updateCameraDensity.stream_id }, updateCameraDensity, { upsert: true }).exec();
 
 	// Result
 	promise.then(function(result) {
@@ -232,9 +234,80 @@ var UpdateDensityCamera = function(updateDensityCamera, resolve, reject) {
 
 	// Error
 	promise.catch(function(err) {
-		console.error("Error: Can not update density camera to database ! " + err);
+		console.error("Error: Can not update camera density to database ! " + err);
 		return reject(err);
 	});
+}
+
+/**
+ * [GetAllCamerasDesnity - Get all cameras density]
+ */
+var GetAllCamerasDensity = function(resolve, reject) {
+	var promise = cameraDensityModel.aggregate([ 	{ "$project": {
+															"_id": 0,
+														    "pole_id": 1,
+								 							"stream_id": 1,
+								 							"density": 1
+														}
+													}
+												]).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not get all cameras density from database ! ", err);
+		return reject(err);
+	});
+}
+
+/**
+ * [RecordCamerasDensity - Record camera density to database]
+ * @param {[type]} camerasDensity [description]
+ */
+var RecordCamerasDensity = function(camerasDensity, resolve, reject) {
+	var currentDate = new Date();
+	var currentHour = currentDate.getHours();
+	var currentMinute = currentDate.getMinutes();
+
+	try{
+		var bulk = cameraDensityHistoryModel.collection.initializeOrderedBulkOp();
+		var counter = 0;
+
+		// Representing a long loop
+		camerasDensity.forEach((cameraDensity) => {
+			var model = {};
+			model["density." + currentHour + "." + currentMinute] = cameraDensity.density;
+
+			bulk.find({ "pole_id": cameraDensity.pole_id,
+						"stream_id": cameraDensity.stream_id }).upsert().updateOne({
+				$set:model
+			});
+	        counter++;
+
+			if (counter % 2000 == 0) {
+		        bulk.execute();
+		        bulk = cameraDensityHistoryModel.collection.initializeOrderedBulkOp();
+		    }        
+	    });
+
+	    if ( counter % 2000 != 0 ){
+	        bulk.execute(function(err,result) {
+	        	if (err != null){
+	        		console.error("Error record last patch : " + err);
+	        	}
+	        });
+	    }
+
+	    return resolve();
+	}
+	catch (err){
+		console.error('Error service: can not record cameras density to database ! ');
+		return reject(err);
+	}
 }
 
 module.exports.GetTrafficPole = GetTrafficPole;
@@ -247,6 +320,11 @@ module.exports.PostNewTrafficPole = PostNewTrafficPole;
 module.exports.UpdateTrafficPole = UpdateTrafficPole;
 module.exports.DeleteTrafficPole = DeleteTrafficPole;
 
-module.exports.GetDensityCamera = GetDensityCamera;
-module.exports.PostDensityCamera = PostDensityCamera;
-module.exports.UpdateDensityCamera = UpdateDensityCamera;
+module.exports.GetCameraDensity = GetCameraDensity;
+module.exports.PostCameraDensity = PostCameraDensity;
+module.exports.UpdateCameraDensity = UpdateCameraDensity;
+
+module.exports.GetAllCamerasDensity = GetAllCamerasDensity;
+module.exports.RecordCamerasDensity = RecordCamerasDensity;
+
+
