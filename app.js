@@ -77,18 +77,6 @@ mongoose.connect(dbConfig.DbType + "://" + dbConfig.HostName + "/" + dbConfig.Db
 
 
 // LOAD DATABASE ---------------------------------
-// LOAD CELL FROM DATABASE
-cellHandler.LoadCells();
-
-// LOAD NODE FROM DATABASE
-nodeHandler.LoadNodes();
-
-// LOAD CURRENT SEGMENT FROM DATABASE
-segmentHandler.LoadSegment();
-// if (dbConfig.RecordHistory == true){
-//   segmentHandler.StartRecordSegment();
-// }
-
 // LOAD STREET FROM DATABASE
 streetHandler.LoadStreets();
 // LOAD DATABASE (END) ---------------------------
