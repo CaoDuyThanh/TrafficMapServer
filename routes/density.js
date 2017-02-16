@@ -116,21 +116,27 @@ router.get('/streetslightpbf/', function(req, res, next){
 					streetLight.points.push(pointLightProto.create({
 													  					lat : segment.node_start[0].lat,			// lat start
 																		lon : segment.node_start[0].lon,			// lon start
-																		dens : segment.density,						// density
-																		velo : segment.velocity,					// velocity
+																		dens : (segment.density.length === 0) ? 
+																						0 : segment.density[0],		// density
+																		velo : (segment.velocity.length === 0) ? 
+																						0 : segment.velocity[0]		// velocity
 														  			}));
 					streetLight.points.push(pointLightProto.create({
 														  				lat : segment.node_end[0].lat,				// lat end
 																		lon : segment.node_end[0].lon,				// lon end
-																		dens : segment.density,						// density
-																		velo : segment.velocity,					// velocity
+																		dens : (segment.density.length === 0) ? 
+																						0 : segment.density[0],		// density
+																		velo : (segment.velocity.length === 0) ? 
+																						0 : segment.velocity[0]		// velocity
 														  			}));
 				} else {
 		  			streetLight.points.push(pointLightProto.create({
 														  				lat : segment.node_end[0].lat,				// lat end
 																		lon : segment.node_end[0].lon,				// lon end
-																		dens : segment.density,						// density
-																		velo : segment.velocity,					// velocity
+																		dens : (segment.density.length === 0) ? 
+																						0 : segment.density[0],		// density
+																		velo : (segment.velocity.length === 0) ? 
+																						0 : segment.velocity[0]		// velocity
 														  			}));
 				}
 				lastSegment = segment;
@@ -138,8 +144,6 @@ router.get('/streetslightpbf/', function(req, res, next){
 			if (streetLight) {
 				streetsRes.streets.push(streetLight);
 			}
-
-
 		  	// Send buffer to client
 		  	var buffer = densityStreetsLightProto.encode(streetsRes).finish();
 			res.send(buffer);
@@ -225,7 +229,7 @@ function updateSegmentDensity(unknownSegment, resolve, reject){
 
 		var currentTimestamp = Date.now();
 		var lowTimestampe = currentTimestamp - dbConfig.TimerSegmentDensityUpdate * 60 * 1000;
-		var promiseGet = new Promise((resolve, reject) => densityService.GetDensitySegment(segment.segment_id, lowTimestampe, resolve, reject));
+		var promiseGet = new Promise((resolve, reject) => densityService.GetSegmentDensity(segment.segment_id, lowTimestampe, resolve, reject));
 		promiseGet.then((data) => {
 			var segmentDensity;
 			if (data.length === 0) {
@@ -258,23 +262,13 @@ function updateSegmentDensity(unknownSegment, resolve, reject){
 			segmentDensity.density = averDensity;
 			segmentDensity.velocity = averVelocity;
 
-			if (data.length === 0) {
-				var promisePost = new Promise((resolve, reject) => densityService.PostDensitySegment(segmentDensity, resolve, reject));
-				promisePost.then((data) => {
-					return resolve();
-				});
-				promisePost.catch((err) => {
-					return reject(err);
-				});
-			} else {
-				var promiseUpdate = new Promise((resolve, reject) => densityService.UpdateDensitySegment(segmentDensity, resolve, reject));
-				promiseUpdate.then((data) => {
-					return resolve();
-				});
-				promiseUpdate.catch((err) => {
-					return reject(err);
-				});
-			}
+			var promiseUpdate = new Promise((resolve, reject) => densityService.UpdateSegmentDensity(segmentDensity, resolve, reject));
+			promiseUpdate.then((data) => {
+				return resolve();
+			});
+			promiseUpdate.catch((err) => {
+				return reject(err);
+			});
 		});
 		promiseGet.catch((err) => {
 			return reject(err);
@@ -327,7 +321,7 @@ router.post('/segments/', function(req, res, next){
 function updateCameraDensity(camera, resolve, reject) {
 	var currentTimestamp = Date.now();
 	var lowTimestampe = currentTimestamp - dbConfig.TimerCameraDensityUpdate * 60 * 1000;
-	var promiseGet = new Promise((resolve, reject) => simulationService.GetDensityCamera(camera.pole_id, camera.stream_id, lowTimestampe, resolve, reject));
+	var promiseGet = new Promise((resolve, reject) => simulationService.GetCameraDensity(camera.pole_id, camera.stream_id, lowTimestampe, resolve, reject));
 	promiseGet.then((data) => {
 		var cameraDensity;
 		if (data.length === 0) {
@@ -355,23 +349,13 @@ function updateCameraDensity(camera, resolve, reject) {
 		averDensity /= history.length;
 		cameraDensity.density = averDensity;
 
-		if (data.length === 0) {
-			var promisePost = new Promise((resolve, reject) => simulationService.PostDensityCamera(cameraDensity, resolve, reject));
-			promisePost.then((data) => {
-				return resolve();
-			});
-			promisePost.catch((err) => {
-				return reject(err);
-			});
-		} else {
-			var promiseUpdate = new Promise((resolve, reject) => simulationService.UpdateDensityCamera(cameraDensity, resolve, reject));
-			promiseUpdate.then((data) => {
-				return resolve();
-			});
-			promiseUpdate.catch((err) => {
-				return reject(err);
-			});
-		}
+		var promiseUpdate = new Promise((resolve, reject) => simulationService.UpdateCameraDensity(cameraDensity, resolve, reject));
+		promiseUpdate.then((data) => {
+			return resolve();
+		});
+		promiseUpdate.catch((err) => {
+			return reject(err);
+		});
 	});
 	promiseGet.catch((err) => {
 		return reject(err);
@@ -383,7 +367,7 @@ router.post('/cameras/', function(req, res, next) {
 
   	// Get parameters
   	var cameras = req.body.cameras;
-	
+
     var promiseAll = Promise.all(cameras.map((camera) => {
     	return new Promise((resolve, reject) => updateCameraDensity(camera, resolve, reject));
     }));
