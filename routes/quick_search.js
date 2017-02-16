@@ -2,6 +2,9 @@
 var express = require('express');
 var router = express.Router();
 
+// IMPORT SERVICE
+var segmentService = require('../service/segment-service');
+
 router.use(function(req, res, next) {
 	if (req.method === 'OPTIONS'){
 	  	res.header("Access-Control-Allow-Origin", "*");
@@ -14,7 +17,6 @@ router.use(function(req, res, next) {
 		next();
 	}
 });
-
 
 /**
  * GET /quicksearch/street?street_name=?&num_items=? - get num_items items which street's name start by street_name
@@ -63,20 +65,27 @@ router.get('/getlocation', function(req, res, next){
 	var fullStreetName = firstNElement[0];
 	var allSegmentIds = global.AllStreetsName[fullStreetName].segments;
 	var randomSegmentId = allSegmentIds[Math.floor(Math.random() * allSegmentIds.length)];
-	var segment = global.AllSegments[randomSegmentId];
-	var lat = global.AllNodes[segment.node_start].lat;
-	var lon = global.AllNodes[segment.node_start].lon;
-
-  	var responseData = {
-		status: 'success',
-		data: {
-			street_name: fullStreetName,
-			lat: lat,
-			lon: lon
-		}
-	};
-	res.json(responseData);
+	
+	// Get segment
+	var promise = new Promise((resolve, reject) => segmentService.GetSegmentWithLocation(randomSegmentId, resolve, reject));
+	promise.then((data) => {
+		var responseData = {
+			status: 'success',
+			data: {
+				street_name: fullStreetName,
+				lat: data.node_start[0].lat,
+				lon: data.node_start[0].lon
+			}
+		};
+		res.json(responseData);
+	});
+	promise.catch((err) => {
+		var responseData = {
+			status: 'failure',
+			message: 'Can not get location !'
+		};
+		res.json(responseData);
+	});
 });
-
 
 module.exports = router;

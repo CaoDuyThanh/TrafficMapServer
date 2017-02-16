@@ -1,3 +1,6 @@
+// Import service
+var cellService = require('../service/cell-service');
+
 var mathUtils = require('./MathUtils');
 
 var ConvertGPSToCellId = function(lon, lat){
@@ -6,15 +9,13 @@ var ConvertGPSToCellId = function(lon, lat){
 	return lon << 16 | lat;
 }
 
-
-var FindCellByGPS = function(allCells, gpsLocation){
-	var cell_id = ConvertGPSToCellId(gpsLocation.Lon, gpsLocation.Lat);
-	return allCells[cell_id];
+var FindCellByGPS = function(gpsLocation){
+	
 }
 
-var DistanceSegmentAndPos = function(segment, allNodes, pos){
-	var nodeStart = allNodes[segment.node_start];
-	var nodeEnd = allNodes[segment.node_end];
+var DistanceSegmentAndPos = function(segment, pos){
+	var nodeStart = segment.node_start[0];
+	var nodeEnd = segment.node_end[0];
 
 	var midPoint = {};
 	midPoint.X = (nodeStart.lon + nodeEnd.lon) / 2;
@@ -27,41 +28,41 @@ var DistanceSegmentAndPos = function(segment, allNodes, pos){
 	return mathUtils.DistanceBetween2Point(midPoint, point);
 }
 
-var FindSegmentByGPS = function(allCells, allSegments, allNodes, gpsLocation){
-	var cell = FindCellByGPS(allCells, gpsLocation);
-
-	if (cell){
-		var segmentsInCell = cell.segments;
-		var min = 10000;
-		var id = -1;
-
-		for (var idx = 0; idx < segmentsInCell.length; idx++){
-			var segmentId = segmentsInCell[idx];
-
-			var segment = allSegments[segmentId];
-			var distance = DistanceSegmentAndPos(segment, allNodes, gpsLocation
-				);
-
-			if (distance < min){
-				min = distance;
-				id = segmentId;
-			}
+var FindSegmentByGPS = function(gpsLocation, resolve, reject){
+	// Find cell based on GPS
+	var cellId = ConvertGPSToCellId(gpsLocation.Lon, gpsLocation.Lat);
+	var promiseCell = new Promise((resolve, reject) => cellService.GetCellSegmentsLatlng(cellId, resolve, reject));
+	promiseCell.then((data) => {
+		if (data.length > 0) {
+			var cell = data[0];
+			var min = 10000;
+			var foundSegment;
+			cell.segments.forEach((segment) => {
+				var distance = DistanceSegmentAndPos(segment, gpsLocation);
+				if (distance < min){
+					min = distance;
+					foundSegment = segment;
+				}
+			});
+			
+			return resolve(foundSegment);
+		} else {
+			return resolve(null);
 		}
-		console.log('Segment_id found: ' + id);
-		return allSegments[id];
-	}else{
+	});
+	promiseCell.catch((err) => {
 		console.error('Can not find cell at GPS location : ' + gpsLocation);
-		return;
-	}
+		return reject(err);
+	});
 }
 
-var CheckSameDirection = function(allNodes, segment, pointStart, pointEnd){
+var CheckSameDirection = function(segment, pointStart, pointEnd){
 	var pointA = {};
-	pointA.X = allNodes[segment.node_start].lon;
-	pointA.Y = allNodes[segment.node_start].lat;
+	pointA.X = segment.node_start[0].lon;
+	pointA.Y = segment.node_start[0].lat;
 	var pointB = {};
-	pointB.X = allNodes[segment.node_end].lon;
-	pointB.Y = allNodes[segment.node_end].lat;
+	pointB.X = segment.node_end[0].lon;
+	pointB.Y = segment.node_end[0].lat;
 	var pointC = {};
 	pointC.X = pointStart.lon;
 	pointC.Y = pointStart.lat;
