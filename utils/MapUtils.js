@@ -54,8 +54,6 @@ var FindSegmentByGPS = function(gpsLocation, resolve, reject){
 		console.error('Can not find cell at GPS location : ' + gpsLocation);
 		return reject(err);
 	});
-
-	
 }
 
 var CheckSameDirection = function(segment, pointStart, pointEnd){
