@@ -9,6 +9,7 @@ mongoose.Promise = require('bluebird');
 var segmentModel = require('../models/SegmentModel');
 var streetModel = require('../models/StreetModel');
 var segmentDensityModel = require('../models/SegmentDensityModel');
+var segmentDensityHistoryModel = require('../models/SegmentDensityHistoryModel');
 
 /**
  * [GetDensityBySegmentIds - Get density based on a list of segmentId]
@@ -31,14 +32,19 @@ var GetDensityBySegmentIds = function(segmentIds, resolve, reject) {
 														    "as": "node_end"
 														}
 											},
+											{ "$lookup": {
+														    "localField": "segment_id",
+														    "from": "segment_densities",
+														    "foreignField": "segment_id",
+														    "as": "segmentDensity"
+														}
+											},
 											{ "$project": {
 															"segment_id": 1,
-														    "node_start.lat": 1,
-														    "node_start.lon": 1,
-														    "node_end.lat": 1,
-														    "node_end.lon": 1,
-														    "density": 1,
-														    "velocity": 1
+														    "node_start": "$node_start",
+														    "node_end": "$node_end",
+														    "density": "$segmentDensity.density",
+														    "velocity": "$segmentDensity.velocity"
 														  } 
 											}])
 							  .exec();
@@ -53,6 +59,10 @@ var GetDensityBySegmentIds = function(segmentIds, resolve, reject) {
 	});
 }
 
+/**
+ * [GetDensityByStreetIds - Get density by list of StreetIds]
+ * @param {[type]} streetIds [description]
+ */
 var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 	var promise = streetModel.aggregate([	{ "$match": { "street_id": { $in: streetIds } } },
 											{ "$unwind": "$segments" },
@@ -113,11 +123,11 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 }
 
 /**
- * [GetDensitySegment - Get density segment]
+ * [GetSegmentDensity - Get density segment]
  * @param {[type]} segmentId    [description]
  * @param {[type]} lowTimestamp [description]
  */
-var GetDensitySegment = function(segmentId, lowTimestamp, resolve, reject) {
+var GetSegmentDensity = function(segmentId, lowTimestamp, resolve, reject) {
 	var promise = segmentDensityModel.aggregate([ 	{ "$match": { 'segment_id': segmentId } },
 												 	{ "$unwind": "$history" },
 												 	{ "$match": {
@@ -155,12 +165,12 @@ var GetDensitySegment = function(segmentId, lowTimestamp, resolve, reject) {
 }
 
 /**
- * [PostDensitySegment - Post density information of a segment]
+ * [PostSegmentDensity - Post density information of a segment]
  * @param {[type]} newDensitySegment [description]
  * @param {[type]} resolve           [description]
  * @param {[type]} reject            [description]
  */
-var PostDensitySegment = function(newDensitySegment, resolve, reject) {
+var PostSegmentDensity = function(newDensitySegment, resolve, reject) {
 	segmentDensityModel.insertMany([newDensitySegment], function(err, result) {
 		if (err) {
 			console.error("Error: Can not post density segment to database ! " + err);
@@ -172,11 +182,11 @@ var PostDensitySegment = function(newDensitySegment, resolve, reject) {
 }
 
 /**
- * [UpdateDensitySegment - Update density information of a segment]
- * @param {[type]} updateDensitySegment [description]
+ * [UpdateSegmentDensity - Update density information of a segment]
+ * @param {[type]} UpdateSegmentDensity [description]
  */
-var UpdateDensitySegment = function(updateDensitySegment, resolve, reject) {
-	var promise = segmentDensityModel.findOneAndUpdate({ 'segment_id': updateDensitySegment.segment_id }, updateDensitySegment).exec();
+var UpdateSegmentDensity = function(UpdateSegmentDensity, resolve, reject) {
+	var promise = segmentDensityModel.findOneAndUpdate({ 'segment_id': UpdateSegmentDensity.segment_id }, UpdateSegmentDensity, { upsert: true } ).exec();
 
 	// Result
 	promise.then(function(result) {
@@ -190,9 +200,86 @@ var UpdateDensitySegment = function(updateDensitySegment, resolve, reject) {
 	});	
 }
 
+/**
+ * [GetAllSegmentsDensity - Get all density segments]
+ * @param {[type]} segmentIds [description]
+ */
+var GetAllSegmentsDensity = function(resolve, reject) {
+	var promise = segmentDensityModel.aggregate([ 	{ "$project": {
+															"_id": 0,
+														    "segment_id": 1,
+								 							"density": 1,
+								 							"velocity": 1
+														}
+													}
+												]).exec();
+
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+
+	// Error
+	promise.catch(function(err) {
+		console.error("Error: Can not get all density segment from database ! " + err);
+		return reject(err);
+	});	
+}
+
+/**
+ * [RecordSegmentsDensity - Record a list of density segments to database]
+ * @param {[type]} densitySegments [description]
+ * @param {[type]} resolve         [description]
+ * @param {[type]} reject          [description]
+ */
+var RecordSegmentsDensity = function(segmentsDensity, resolve, reject) {
+	var currentDate = new Date();
+	var currentHour = currentDate.getHours();
+	var currentMinute = currentDate.getMinutes();
+
+	try{
+		var bulk = segmentDensityHistoryModel.collection.initializeOrderedBulkOp();
+		var counter = 0;
+
+		// Representing a long loop
+		segmentsDensity.forEach((segmentDensity) => {
+			var model = {};
+			model["density." + currentHour + "." + currentMinute] = segmentDensity.density;
+			model["velocity." + currentHour + "." + currentMinute] = segmentDensity.velocity;
+
+			bulk.find({"segment_id":segmentDensity.segment_id}).upsert().updateOne({
+				$set:model
+			});
+	        counter++;
+
+			if (counter % 2000 == 0) {
+		        bulk.execute();
+		        bulk = segmentDensityHistoryModel.collection.initializeOrderedBulkOp();
+		    }        
+	    });
+
+	    if ( counter % 2000 != 0 ){
+	        bulk.execute(function(err,result) {
+	        	if (err != null){
+	        		console.error("Error record last patch : " + err);
+	        	}
+	        });
+	    }
+
+	    return resolve();
+	}
+	catch (err){
+		console.error('Error service: can not record segments density to database ! ');
+		return reject(err);
+	}
+}
+
 module.exports.GetDensityBySegmentIds = GetDensityBySegmentIds;
 module.exports.GetDensityByStreetIds = GetDensityByStreetIds;
 
-module.exports.GetDensitySegment = GetDensitySegment;
-module.exports.PostDensitySegment = PostDensitySegment;
-module.exports.UpdateDensitySegment = UpdateDensitySegment;
+module.exports.GetSegmentDensity = GetSegmentDensity;
+module.exports.PostSegmentDensity = PostSegmentDensity;
+module.exports.UpdateSegmentDensity = UpdateSegmentDensity;
+
+module.exports.GetAllSegmentsDensity = GetAllSegmentsDensity;
+module.exports.RecordSegmentsDensity = RecordSegmentsDensity;
