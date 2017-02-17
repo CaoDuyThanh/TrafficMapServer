@@ -79,8 +79,10 @@ var GetCellSegmentsLatlng = function(cellId, resolve, reject) {
 										},
 										{ "$project": {
 														"segmentObjects.segment_id": 1,
+														"segmentObjects.node_start.node_id": 1,
 													    "segmentObjects.node_start.lat": 1,
 													    "segmentObjects.node_start.lon": 1,
+													    "segmentObjects.node_end.node_id": 1,
 													    "segmentObjects.node_end.lat": 1,
 													    "segmentObjects.node_end.lon": 1,
 													  } 
