@@ -10,8 +10,8 @@
 		"Port": 3000,
 
 		"RecordHistory": true,								// Auto record density map
-		"TimerCameraDensityRecord": 2,						// every 5 minute
-		"TimerSegmentDensityRecord": 2,						// every 5 minute
+		"TimerCameraDensityRecord": 20,						// every 5 minute
+		"TimerSegmentDensityRecord": 20,						// every 5 minute
 		"TimerCameraDensityUpdate": 30,						// Camera density calculated based on last TimerCameraDensityUpdate minutes
 		"TimerSegmentDensityUpdate": 30						// Segment density calculated based on last TimerSegmentDensityUpdate minutes
 	},
