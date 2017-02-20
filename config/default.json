@@ -10,8 +10,8 @@
 		"Port": 3000,
 
 		"RecordHistory": true,								// Auto record density map
-		"TimerCameraDensityRecord": 2,						// every 5 minute
-		"TimerSegmentDensityRecord": 2,						// every 5 minute
+		"TimerCameraDensityRecord": 20,						// every 5 minute
+		"TimerSegmentDensityRecord": 20,						// every 5 minute
 		"TimerCameraDensityUpdate": 30,						// Camera density calculated based on last TimerCameraDensityUpdate minutes
 		"TimerSegmentDensityUpdate": 30						// Segment density calculated based on last TimerSegmentDensityUpdate minutes
 	},
@@ -93,14 +93,19 @@
 								}
 				},
 		"MapLevelStreetLevel": {
-			"moorway":   	1,
-			"trunk": 		2,
-			"primary": 		3,
-			"secondary":	4,
-			"tertiary": 	5,
-			"unclassified": 6,
-			"residential": 	7,
-			"service":		8
+			"motorway":   		1,
+			"motorway_link":   	1,
+			"trunk": 			2,
+			"trunk_link":		2,
+			"primary": 			3,
+			"primary_link":		3,
+			"secondary":		4,
+			"secondary_link":	4,
+			"tertiary": 		5,
+			"tertiary_link":	5,
+			"unclassified": 	6,
+			"residential": 		7,
+			"service":			8
 		}
 
 	}

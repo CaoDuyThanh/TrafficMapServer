@@ -20,6 +20,7 @@ var simulation = require('./routes/simulation');
 var quickSearch = require('./routes/quick_search');
 var statistic = require('./routes/statistic');
 var streets = require('./routes/streets');
+var service = require('./routes/service');
 var app = express();
 // IMPORT ROUTES (END) ----------------------
 
@@ -43,6 +44,7 @@ app.use('/simulation', simulation);
 app.use('/quicksearch', quickSearch);
 app.use('/statistic', statistic);
 app.use('/streets', streets);
+app.use('/service', service);
 // SETTING ROUTES (END) ------------------------
 
 // SPECIAL CASE - ERROR 404 HANDLER
