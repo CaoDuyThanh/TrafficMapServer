@@ -77,22 +77,21 @@ var CheckSameDirection = function(segment, pointStart, pointEnd){
 	return mathUtils.CheckSameDirection(pointA, pointB, pointC, pointD);
 }
 
-var PathFinder = {
-	CellIds: {},
-	Graph: {},
-	ListNodes: {},
+var PathFinder = function () {
+	// All data loaded from database => find path on map
+	this.CellIds = {};
+	this.Graph = {};
+	this.ListNodes = {};
 	
 	// Dijkstra parameters
-	Distance: {},
-	Trace: {},
-	Check: {},
+	this.Distance = {};
+	this.Trace = {};
+	this.Check = {};
 
-
-	loadCell: function(cellId, resolve, reject) {
+	this.loadCell = function(cellId, resolve, reject) {
 		if (this.CellIds[cellId]) {
 			return resolve();
 		} else {
-			console.log('call this');
 			var promise = new Promise((resolve, reject) => cellService.GetCellSegmentsLatlng(cellId, resolve, reject));
 			promise.then((data) => {
 				if (data.length > 0) {
@@ -122,9 +121,9 @@ var PathFinder = {
 				return reject(err);
 			});
 		}
-	},
+	};
 
-	distance2Nodes: function(nodeA, nodeB) {
+	this.distance2Nodes = function(nodeA, nodeB) {
 		var pointA = {};
 		pointA.X = nodeA.lon;
 		pointA.Y = nodeA.lat;
@@ -134,27 +133,26 @@ var PathFinder = {
 		pointB.Y = nodeB.lat;
 
 		return mathUtils.DistanceBetween2Point(pointA, pointB);
-	},
+	};
 
-	promiseWhile: Promise.method(function(startNodeId, endNodeId, condition, action, resolve, reject) {
-		var data = condition();
-		var minNodeId = data.min_node_id;
-		if (minNodeId === endNodeId) {
+	this.promiseWhile = Promise.method(function(startNodeId, endNodeId, condition, action, resolve, reject) {
+		var minNodeId = condition();
+
+		if (this.Check[endNodeId]) {
 			var result = [];
 			var tempNodeId = endNodeId;
-			while (tempNodeId !== startNodeId) {
+			while (+tempNodeId !== +startNodeId) {
 				result.push(this.ListNodes[tempNodeId]);
 				tempNodeId = this.Trace[tempNodeId];
 			}
 			result.push(this.ListNodes[tempNodeId]);
-
 			return resolve(result);
 		} else {
 			return action(minNodeId).then(this.promiseWhile.bind(this, startNodeId, endNodeId, condition, action, resolve, reject));
 		}
-	}),
+	});
 
-	dijkstraAStar: function(startNodeId, endNodeId, resolve, reject) {
+	this.dijkstraAStar = function(startNodeId, endNodeId, resolve, reject) {
 		var startNode = this.ListNodes[startNodeId];
 		var endNode = this.ListNodes[endNodeId];
 		this.Distance[startNodeId] = this.distance2Nodes(startNode, endNode);
@@ -173,18 +171,23 @@ var PathFinder = {
 						}
 					}
 				}
-				this.Check[minNodeId] = 1;				
+				this.Check[minNodeId] = 1;
 
-				return {
-					min_node_id: minNodeId,
-				}
+				return minNodeId;
 			},
 			(minNodeId) => {	// action fallback
 				if (this.Graph[minNodeId]){
 					var promiseAll = Promise.all(
-						this.Graph[minNodeId].map((neighborNodeId) => {						
-							this.Distance[neighborNodeId] = this.Distance[minNodeId] + this.distance2Nodes(this.ListNodes[neighborNodeId], this.ListNodes[endNodeId]);
-							this.Trace[neighborNodeId] = minNodeId;					
+						this.Graph[minNodeId].map((neighborNodeId) => {
+							var distance = this.Distance[minNodeId] 
+									  	 + this.distance2Nodes(this.ListNodes[minNodeId], this.ListNodes[neighborNodeId])
+									  	 + this.distance2Nodes(this.ListNodes[neighborNodeId], this.ListNodes[endNodeId]);
+
+							if (!this.Distance[neighborNodeId] || distance < this.Distance[neighborNodeId]) {
+
+								this.Distance[neighborNodeId] = distance;
+								this.Trace[neighborNodeId] = minNodeId;
+							}
 
 							var cellId = ConvertGPSToCellId(this.ListNodes[neighborNodeId].lon, this.ListNodes[neighborNodeId].lat);
 							if (!this.CellIds[cellId]) {	// CellId does not exist
@@ -198,12 +201,13 @@ var PathFinder = {
 				} else {
 					return new Promise((resolve) => resolve());
 				}
-			}
-
+			},
+			resolve,
+			reject
 		);
-	},
+	};
 
-	nearestNodeId: function(location) {
+	this.nearestNodeId = function(location) {
 		var min = 10000;
 		var minNodeId;
 		for (var nodeId in this.ListNodes) {
@@ -216,9 +220,9 @@ var PathFinder = {
 			}
 		}
 		return minNodeId;
-	},
+	};
 
-	FindPath: function(startLocation, endLocation, resolve, reject) {
+	this.FindPath = function(startLocation, endLocation, resolve, reject) {
 		var startCellId = ConvertGPSToCellId(startLocation.lon, startLocation.lat);
 		var endCellId = ConvertGPSToCellId(endLocation.lon, endLocation.lat);
 
@@ -229,8 +233,7 @@ var PathFinder = {
 				promise1.then((result) => {
 					var startNodeId = this.nearestNodeId(startLocation);
 					var endNodeId = this.nearestNodeId(endLocation);
-
-					return this.dijkstraAStar(endNodeId, startNodeId, resolve, reject) ;
+					return this.dijkstraAStar(startNodeId, endNodeId, resolve, reject);
 				});
 				promise1.catch((err) => {
 					return reject(err);
@@ -240,7 +243,7 @@ var PathFinder = {
 				return reject(err);
 			});
 		}		
-	}
+	};
 }
 
 
