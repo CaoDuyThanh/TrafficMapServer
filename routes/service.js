@@ -35,13 +35,13 @@ router.get('/findpath/', function(req, res, next){
 	nodeEnd.lon = +req.query.node_end_lon;
 	nodeEnd.lat = +req.query.node_end_lat;
 
-	var pathFinderObj = mapUtils.PathFinder;
+	var pathFinderObj = new mapUtils.PathFinder();
 	var promise = new Promise((resolve, reject) => pathFinderObj.FindPath(nodeStart, nodeEnd, resolve, reject));
 	promise.then((data) => {
 		var responseData = {
 			status: 'success',
 			data: {
-				path: data
+				path: data.reverse()
 			}
 		};
 		res.json(responseData);
