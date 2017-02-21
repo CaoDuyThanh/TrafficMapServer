@@ -19,6 +19,7 @@ var LoadStreets = function(){
 			if (streetName != ""){
 				if (!global.AllStreetsName[streetName]){
 					global.AllStreetsName[streetName] = {};
+					global.AllStreetsName[streetName].street_id = street.street_id;
 					global.AllStreetsName[streetName].segments = [];
 				}
 
