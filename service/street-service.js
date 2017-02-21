@@ -46,5 +46,50 @@ var GetAllStreets = function(resolve, reject) {
 	});
 }
 
+/**
+ * [GetStreetDensity - Get street with all it's segment density]
+ * @param {[type]} streetId [description]
+ * @param {[type]} resolve  [description]
+ * @param {[type]} reject   [description]
+ */
+var GetStreetDensity = function(streetId, resolve, reject) {
+	var promise = streetModel.aggregate([ 	{ "$match": { 'street_id': streetId	} },
+										 	{ "$unwind": "$segments" },
+											{ "$lookup": {
+														    "localField": "segments",
+														    "from": "segment_densities",
+														    "foreignField": "segment_id",
+														    "as": "segmentDensity"
+														}
+											},
+										 	{ "$group": {
+												    "_id": { "street_id": "$street_id" },
+												    "segments": { "$push": "$segmentDensity" }
+												}
+											},
+											{ "$project": {
+													"_id": 0,
+												    "street_id": "$_id.street_id",
+						 							"segments.segment_id": 1,
+						 							"segments.density": 1,
+						 							"segments.velocity": 1
+												}
+											}
+										]).exec();
+	// Result
+	promise.then(function(result) {
+		return resolve(result);
+	});
+	// Error
+	promise.catch(function(err) {
+		console.error('Service error: Can not get street density streetId = ' + streetId, err);
+		return reject(err);
+	})
+
+
+}
+
+
 module.exports.GetStreet = GetStreet;
 module.exports.GetAllStreets = GetAllStreets;
+module.exports.GetStreetDensity = GetStreetDensity;
