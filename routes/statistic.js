@@ -6,16 +6,20 @@ var router = express.Router();
 var config = require('../configuration');
 var dbConfig = config.DbConfig;
 
+// IMPORT UTILS
+var mapUtils = require('../utils/MapUtils');
+
 // IMPORT SERVICE
 var simulationService = require('../service/simulation-service');
 var streetService = require('../service/street-service');
+var densityService = require('../service/density-service');
 
 
 router.use(function(req, res, next) {
 	if (req.method === 'OPTIONS'){
-	  	res.header("Access-Control-Allow-Origin", "*");
+	  	res.header('Access-Control-Allow-Origin', '*');
 		res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 		res.status(200);
 		res.end();
 	}
@@ -32,8 +36,8 @@ router.use(function(req, res, next) {
  * @param  {[type]} next 				 [description]
  */
 router.get('/density/segment/:segment_id', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   	// Get inputs
   	var segmentId = req.params.segment_id;
@@ -56,8 +60,8 @@ router.get('/density/segment/:segment_id', function(req, res, next){
  * @param  {[type]} next 				 [description]
  */
 router.get('/vehicles/street', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   	// Get inputs
   	var streetName = req.query.street_name;
@@ -89,8 +93,8 @@ router.get('/vehicles/street', function(req, res, next){
  * @param  {[type]} next 				 [description]
  */
 router.get('/vehicles/camera', function(req, res, next){
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
 	// Get parameters
 	var poleId = +req.query.pole_id;
@@ -122,12 +126,12 @@ router.get('/vehicles/camera', function(req, res, next){
  * GET /density/street?street_name - get density of a street
  * @param  {[type]} req   [description]
  * @param  {[type]} res   [description]
- * @param  {[type]} next) {	res.header("Access-Control-Allow-Origin", "*");  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");  	  	var streetName [description]
+ * @param  {[type]} next) {	res.header('Access-Control-Allow-Origin', '*');  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');  	  	var streetName [description]
  * @return {[type]}       [description]
  */
 router.get('/density/street', function(req, res, next) {
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   	// Get inputs
   	var streetName = req.query.street_name;
@@ -200,12 +204,12 @@ router.get('/density/street', function(req, res, next) {
  * GET /density/camera?pole_id=?&stream_id=? - get density of a camera
  * @param  {[type]}   req   [description]
  * @param  {[type]}   res   [description]
- * @param  {Function} next) {	res.header("Access-Control-Allow-Origin", "*");  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");	  	  	var poleId [description]
+ * @param  {Function} next) {	res.header('Access-Control-Allow-Origin', '*');  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');	  	  	var poleId [description]
  * @return {[type]}         [description]
  */
 router.get('/density/camera', function(req, res, next) {
-	res.header("Access-Control-Allow-Origin", "*");
-  	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");	
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   	// Get inputs
   	var poleId = +req.query.pole_id;
@@ -251,6 +255,71 @@ router.get('/density/camera', function(req, res, next) {
 		res.json(responseData);	
 		next(err);
   	})
+});
+
+/**
+ * GET /density/point?lat=?&lon=? - get density at a point
+ * @return {[JSON]}       [An object json contain density at a point]
+ */
+router.get('/density/point', function(req, res, next) {
+	res.header('Access-Control-Allow-Origin', '*');
+  	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  	// Get inputs
+  	var lat = +req.query.lat;
+  	var lon = +req.query.lon;
+
+  	// Execute
+  	var uSeg_GPS_Mid = {};
+	uSeg_GPS_Mid.Lon = lon;
+	uSeg_GPS_Mid.Lat = lat;
+
+	// Find segment by GPS location
+	var promiseSeg = new Promise((resolve, reject) => mapUtils.FindSegmentByGPS(uSeg_GPS_Mid, resolve, reject));
+	promiseSeg.then((segment) => {
+		var promise = new Promise((resolve, reject) => densityService.GetDensityBySegmentId(segment.segment_id, resolve, reject));
+	  	promise.then((segmentDensity) => {
+			var date = new Date();
+		    var UTCTime = Date.UTC(
+		        date.getFullYear(),
+		        date.getMonth() + 1,
+		        date.getDate(),
+		        date.getHours(),
+		        date.getMinutes(), 
+		        date.getSeconds()
+		    );
+	  		var density = (segmentDensity.density.length === 0) ? 0 : segment.density[0];		// density
+	  		var velocity = (segmentDensity.velocity.length === 0) ? 0 : segment.velocity[0];	// velocity
+
+	  	  	var responseData = {
+				status: 'success',
+				data: {
+					density: Math.floor(Math.random() * 50),  // density,
+					velocity: Math.floor(Math.random() * 50), // velocity,
+					utc_time: UTCTime
+				}
+			};
+			res.json(responseData);
+	  	});
+	  	promise.catch((err) => {
+	  		console.error('Route error: Can not get segment density by GPS', err);
+	  		var responseData = {
+				status: 'failure',
+				message: 'Can not get density at point(' + lat + ',' + lon + ') !'
+			};
+			res.json(responseData);	
+			next(err);
+	  	});
+	});
+	promiseSeg.catch((err) => {
+		console.error('Route error: Can not get segment by GPS', err);
+		var responseData = {
+			status: 'failure',
+			message: 'Can not get density at point(' + lat + ',' + lon + ') !'
+		};
+		res.json(responseData);	
+		next(err);
+	});
 });
 
 router
