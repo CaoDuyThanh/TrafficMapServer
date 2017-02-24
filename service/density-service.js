@@ -12,39 +12,90 @@ var segmentDensityModel = require('../models/SegmentDensityModel');
 var segmentDensityHistoryModel = require('../models/SegmentDensityHistoryModel');
 
 /**
+ * [GetDensityBySegmentId - Get density of segment based on a segment_id]
+ * @param  {[Array]} 	segmentIds  [A list of segmentId]
+ */
+var GetDensityBySegmentId = function(segmentId, resolve, reject) {
+	var promise = segmentModel.aggregate([  { '$match': { 'segment_id': segmentId } },
+											{ '$lookup': {
+														    'localField': 'node_start',
+														    'from': 'nodes',
+														    'foreignField': 'node_id',
+														    'as': 'node_start'
+														}
+											},
+											{ '$lookup': {
+														    'localField': 'node_end',
+														    'from': 'nodes',
+														    'foreignField': 'node_id',
+														    'as': 'node_end'
+														}
+											},
+											{ '$lookup': {
+														    'localField': 'segment_id',
+														    'from': 'segment_densities',
+														    'foreignField': 'segment_id',
+														    'as': 'segmentDensity'
+														}
+											},
+											{ '$project': {
+															'segment_id': 1,
+														    'node_start': '$node_start',
+														    'node_end': '$node_end',
+														    'density': '$segmentDensity.density',
+														    'velocity': '$segmentDensity.velocity'
+														  } 
+											}])
+							  .exec();
+	// Result
+	promise.then((data) => {
+		if (data.length > 0){
+			return resolve(data[0]);
+		} else {
+			console.error('Error: Can not load density by segmentId = ' + segmentId + ' !', err);
+			return reject(err);
+		}
+	});
+	// Error
+	promise.catch((err) => {
+		console.error('Error: Can not load density by segmentId = ' + segmentId + ' !', err);
+		return reject(err);
+	});
+}
+
+/**
  * [GetDensityBySegmentIds - Get density based on a list of segmentId]
  * @param  {[Array]} 	segmentIds  [A list of segmentId]
- * @return {[Buffer]} 	      		[Return proto buffer]
  */
 var GetDensityBySegmentIds = function(segmentIds, resolve, reject) {
-	var promise = segmentModel.aggregate([  { "$match": { "segment_id": { $in: segmentIds } } },
-											{ "$lookup": {
-														    "localField": "node_start",
-														    "from": "nodes",
-														    "foreignField": "node_id",
-														    "as": "node_start"
+	var promise = segmentModel.aggregate([  { '$match': { 'segment_id': { $in: segmentIds } } },
+											{ '$lookup': {
+														    'localField': 'node_start',
+														    'from': 'nodes',
+														    'foreignField': 'node_id',
+														    'as': 'node_start'
 														}
 											},
-											{ "$lookup": {
-														    "localField": "node_end",
-														    "from": "nodes",
-														    "foreignField": "node_id",
-														    "as": "node_end"
+											{ '$lookup': {
+														    'localField': 'node_end',
+														    'from': 'nodes',
+														    'foreignField': 'node_id',
+														    'as': 'node_end'
 														}
 											},
-											{ "$lookup": {
-														    "localField": "segment_id",
-														    "from": "segment_densities",
-														    "foreignField": "segment_id",
-														    "as": "segmentDensity"
+											{ '$lookup': {
+														    'localField': 'segment_id',
+														    'from': 'segment_densities',
+														    'foreignField': 'segment_id',
+														    'as': 'segmentDensity'
 														}
 											},
-											{ "$project": {
-															"segment_id": 1,
-														    "node_start": "$node_start",
-														    "node_end": "$node_end",
-														    "density": "$segmentDensity.density",
-														    "velocity": "$segmentDensity.velocity"
+											{ '$project': {
+															'segment_id': 1,
+														    'node_start': '$node_start',
+														    'node_end': '$node_end',
+														    'density': '$segmentDensity.density',
+														    'velocity': '$segmentDensity.velocity'
 														  } 
 											}])
 							  .exec();
@@ -54,7 +105,7 @@ var GetDensityBySegmentIds = function(segmentIds, resolve, reject) {
 	});
 	// Error
 	promise.catch((err) => {
-		console.error("Error: Can not load density by segmentIds ! " + err);
+		console.error('Error: Can not load density by segmentIds ! ' + err);
 		return reject(err);
 	});
 }
@@ -64,48 +115,48 @@ var GetDensityBySegmentIds = function(segmentIds, resolve, reject) {
  * @param {[type]} streetIds [description]
  */
 var GetDensityByStreetIds = function(streetIds, resolve, reject) {
-	var promise = streetModel.aggregate([	{ "$match": { "street_id": { $in: streetIds } } },
-											{ "$unwind": "$segments" },
-											{ "$lookup": {
-														    "localField": "segments",
-														    "from": "segments",
-														    "foreignField": "segment_id",
-														    "as": "segmentObjects"
+	var promise = streetModel.aggregate([	{ '$match': { 'street_id': { $in: streetIds } } },
+											{ '$unwind': '$segments' },
+											{ '$lookup': {
+														    'localField': 'segments',
+														    'from': 'segments',
+														    'foreignField': 'segment_id',
+														    'as': 'segmentObjects'
 														}
 											},
-											{ "$unwind": {
-															"path": "$segmentObjects",
-															"preserveNullAndEmptyArrays": true 
+											{ '$unwind': {
+															'path': '$segmentObjects',
+															'preserveNullAndEmptyArrays': true 
 														}
 											},
-											{ "$lookup": {
-															"from": "nodes",
-														    "localField": "segmentObjects.node_start",
-														    "foreignField": "node_id",
-														    "as": "segmentObjects.node_start"
+											{ '$lookup': {
+															'from': 'nodes',
+														    'localField': 'segmentObjects.node_start',
+														    'foreignField': 'node_id',
+														    'as': 'segmentObjects.node_start'
 														}
 											},
-											{ "$lookup": {
-														    "from": "nodes",
-														    "localField": "segmentObjects.node_end",
-														    "foreignField": "node_id",
-														    "as": "segmentObjects.node_end"
+											{ '$lookup': {
+														    'from': 'nodes',
+														    'localField': 'segmentObjects.node_end',
+														    'foreignField': 'node_id',
+														    'as': 'segmentObjects.node_end'
 														}
 											},
-											{ "$project": {
-															"segmentObjects.segment_id": 1,
-														    "segmentObjects.node_start.lat": 1,
-														    "segmentObjects.node_start.lon": 1,
-														    "segmentObjects.node_end.lat": 1,
-														    "segmentObjects.node_end.lon": 1,
-														    "segmentObjects.density": 1,
-														    "segmentObjects.velocity": 1
+											{ '$project': {
+															'segmentObjects.segment_id': 1,
+														    'segmentObjects.node_start.lat': 1,
+														    'segmentObjects.node_start.lon': 1,
+														    'segmentObjects.node_end.lat': 1,
+														    'segmentObjects.node_end.lon': 1,
+														    'segmentObjects.density': 1,
+														    'segmentObjects.velocity': 1
 														  } 
 											},											
-											{ "$unwind": "$segmentObjects" },
-											{ "$group": {
-														    "_id": "$_id",
-														    "segments": { "$push": "$segmentObjects" },
+											{ '$unwind': '$segmentObjects' },
+											{ '$group': {
+														    '_id': '$_id',
+														    'segments': { '$push': '$segmentObjects' },
 														}
 											}
 											])
@@ -117,7 +168,7 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 	});
 	// Error
 	promise.catch((err) => {
-		console.error("Error: Can not load density by streetIds ! " + err);
+		console.error('Error: Can not load density by streetIds ! ' + err);
 		return reject(err);		
 	});
 }
@@ -128,26 +179,26 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
  * @param {[type]} lowTimestamp [description]
  */
 var GetSegmentDensity = function(segmentId, lowTimestamp, resolve, reject) {
-	var promise = segmentDensityModel.aggregate([ 	{ "$match": { 'segment_id': segmentId } },
-												 	{ "$unwind": "$history" },
-												 	{ "$match": {
-												 					"history.timestamp": { $gte: lowTimestamp } 
+	var promise = segmentDensityModel.aggregate([ 	{ '$match': { 'segment_id': segmentId } },
+												 	{ '$unwind': '$history' },
+												 	{ '$match': {
+												 					'history.timestamp': { $gte: lowTimestamp } 
 												 				}
 										 			},
-												 	{ "$group": {
-														    "_id": { "segment_id": "$segment_id",
-										 							 "density": "$density",
-										 							 "velocity": "$velocity"
+												 	{ '$group': {
+														    '_id': { 'segment_id': '$segment_id',
+										 							 'density': '$density',
+										 							 'velocity': '$velocity'
 										 							},
-														    "history": { "$push": "$history" }
+														    'history': { '$push': '$history' }
 														}
 													},
-													{ "$project": {
-															"_id": 0,
-														    "segment_id": "$_id.segment_id",
-								 							"density": "$_id.density",
-								 							"velocity": "$_id.velocity",
-								 							"history": 1
+													{ '$project': {
+															'_id': 0,
+														    'segment_id': '$_id.segment_id',
+								 							'density': '$_id.density',
+								 							'velocity': '$_id.velocity',
+								 							'history': 1
 														}
 													}
 												]).exec();
@@ -159,7 +210,7 @@ var GetSegmentDensity = function(segmentId, lowTimestamp, resolve, reject) {
 
 	// Error
 	promise.catch(function(err) {
-		console.error("Error: Can not get density segment from database by segment_id = " + segmentId + " ! " + err);
+		console.error('Error: Can not get density segment from database by segment_id = ' + segmentId + ' ! ' + err);
 		return reject(err);
 	});
 }
@@ -173,7 +224,7 @@ var GetSegmentDensity = function(segmentId, lowTimestamp, resolve, reject) {
 var PostSegmentDensity = function(newDensitySegment, resolve, reject) {
 	segmentDensityModel.insertMany([newDensitySegment], function(err, result) {
 		if (err) {
-			console.error("Error: Can not post density segment to database ! " + err);
+			console.error('Error: Can not post density segment to database ! ' + err);
 			return reject(err);
 		}
 
@@ -195,7 +246,7 @@ var UpdateSegmentDensity = function(UpdateSegmentDensity, resolve, reject) {
 
 	// Error
 	promise.catch(function(err) {
-		console.error("Error: Can not update density segment to database ! " + err);
+		console.error('Error: Can not update density segment to database ! ' + err);
 		return reject(err);
 	});	
 }
@@ -205,11 +256,11 @@ var UpdateSegmentDensity = function(UpdateSegmentDensity, resolve, reject) {
  * @param {[type]} segmentIds [description]
  */
 var GetAllSegmentsDensity = function(resolve, reject) {
-	var promise = segmentDensityModel.aggregate([ 	{ "$project": {
-															"_id": 0,
-														    "segment_id": 1,
-								 							"density": 1,
-								 							"velocity": 1
+	var promise = segmentDensityModel.aggregate([ 	{ '$project': {
+															'_id': 0,
+														    'segment_id': 1,
+								 							'density': 1,
+								 							'velocity': 1
 														}
 													}
 												]).exec();
@@ -221,7 +272,7 @@ var GetAllSegmentsDensity = function(resolve, reject) {
 
 	// Error
 	promise.catch(function(err) {
-		console.error("Error: Can not get all density segment from database ! " + err);
+		console.error('Error: Can not get all density segment from database ! ' + err);
 		return reject(err);
 	});	
 }
@@ -244,10 +295,10 @@ var RecordSegmentsDensity = function(segmentsDensity, resolve, reject) {
 		// Representing a long loop
 		segmentsDensity.forEach((segmentDensity) => {
 			var model = {};
-			model["density." + currentHour + "." + currentMinute] = segmentDensity.density;
-			model["velocity." + currentHour + "." + currentMinute] = segmentDensity.velocity;
+			model['density.' + currentHour + '.' + currentMinute] = segmentDensity.density;
+			model['velocity.' + currentHour + '.' + currentMinute] = segmentDensity.velocity;
 
-			bulk.find({"segment_id":segmentDensity.segment_id}).upsert().updateOne({
+			bulk.find({'segment_id':segmentDensity.segment_id}).upsert().updateOne({
 				$set:model
 			});
 	        counter++;
@@ -261,7 +312,7 @@ var RecordSegmentsDensity = function(segmentsDensity, resolve, reject) {
 	    if ( counter % 2000 != 0 ){
 	        bulk.execute(function(err,result) {
 	        	if (err != null){
-	        		console.error("Error record last patch : " + err);
+	        		console.error('Error record last patch : ' + err);
 	        	}
 	        });
 	    }
@@ -274,6 +325,7 @@ var RecordSegmentsDensity = function(segmentsDensity, resolve, reject) {
 	}
 }
 
+module.exports.GetDensityBySegmentId = GetDensityBySegmentId;
 module.exports.GetDensityBySegmentIds = GetDensityBySegmentIds;
 module.exports.GetDensityByStreetIds = GetDensityByStreetIds;
 
