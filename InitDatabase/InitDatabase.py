@@ -23,8 +23,8 @@ class FindSegmentInCell:
 	def convertGPSToCellId(self, lon, lat):
 		"""Input: real longtitude and latitude of GPS device return to System
 	Output: cell_id after solve"""
-		lon = int(lon * 100) + 9000
-		lat = int(lat * 100) + 18000
+		lon = int(lon * 100) + 18000
+		lat = int(lat * 100) + 9000
 		return lon << 16 | lat
 
 	def convertAngleToCellId(self, lon, lat):
@@ -41,10 +41,10 @@ class FindSegmentInCell:
 		"""
 
 		# lon lat after convert to float
-		self.ACToFlonS = self.lonS * 100 + 9000
-		self.ACToFlatS = self.latS * 100 + 18000
-		self.ACToFlonE = self.lonE * 100 + 9000
-		self.ACToFlatE = self.latE * 100 + 18000
+		self.ACToFlonS = self.lonS * 100 + 18000
+		self.ACToFlatS = self.latS * 100 + 9000
+		self.ACToFlonE = self.lonE * 100 + 18000
+		self.ACToFlatE = self.latE * 100 + 9000
 			# check the line throw two point, start and end, interrupt as less 1 in 2 diagonal line of cell
 		check1 = (self.mulTwoVector(lonOfCell, latOfCell) * self.mulTwoVector(lonOfCell+1, latOfCell+1))<0
 		check2 = (self.mulTwoVector(lonOfCell+1, latOfCell) * self.mulTwoVector(lonOfCell, latOfCell+1))<0
@@ -60,10 +60,10 @@ class FindSegmentInCell:
 		self.latE = latE
 
 			# longitude and latitude after convert to know cell contain the start point and end point
-		AClonS = int(self.lonS * 100) + 9000#tuong duoi voi x diem dau
-		AClatS = int(self.latS * 100) + 18000#tuong duoi voi Y diem dau
-		AClonE = int(self.lonE * 100) + 9000#tuong duoi voi x diem cuoi
-		AClatE = int(self.latE * 100) + 18000#tuong duoi voi y diem cuoi
+		AClonS = int(self.lonS * 100) + 18000#tuong duoi voi x diem dau
+		AClatS = int(self.latS * 100) + 9000#tuong duoi voi Y diem dau
+		AClonE = int(self.lonE * 100) + 18000#tuong duoi voi x diem cuoi
+		AClatE = int(self.latE * 100) + 9000#tuong duoi voi y diem cuoi
 
 		if ((AClonS == AClonE) & (AClatS == AClatE) ):#check if both of point in a cell TH1
 			# print("=======> 0 ")
@@ -115,7 +115,7 @@ class FindSegmentInCell:
 					AClonE += tempLon
 					AClatE += tempLat
 					while not(AClonS == AClonE):
-						AClatS=int(latS * 100) + 18000
+						AClatS=int(latS * 100) + 9000
 						while not(AClatS == AClatE):
 							if self.checkTrendOfPoint (AClonS, AClatE):
 								listCellid.append(self.convertAngleToCellId(AClonS, AClatS))
