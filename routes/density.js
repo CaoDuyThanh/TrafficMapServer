@@ -184,6 +184,12 @@ router.get('/streets/', function(req, res, next){
 	// Get all streets by list of streetIds
 	var promise = new Promise((resolve, reject) => densityService.GetDensityByStreetIds(streetIds, resolve, reject));
 	promise.then((streets) => {
+		streets.forEach((street) => {
+			street.segments.forEach((segment) => {
+				segment.density = (segment.density.length === 0) ? 0 : segment.density[0];
+				segment.velocity = (segment.velocity.length === 0) ? 0 : segment.velocity[0];
+			});
+		});
 		res.json(streets);
 	});
 	promise.catch((err) => {
