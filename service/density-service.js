@@ -143,14 +143,21 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 														    'as': 'segmentObjects.node_end'
 														}
 											},
+											{ '$lookup': {
+														    'localField': 'segmentObjects.segment_id',
+														    'from': 'segment_densities',
+														    'foreignField': 'segment_id',
+														    'as': 'segmentDensity'
+														}
+											},
 											{ '$project': {
 															'segmentObjects.segment_id': 1,
 														    'segmentObjects.node_start.lat': 1,
 														    'segmentObjects.node_start.lon': 1,
 														    'segmentObjects.node_end.lat': 1,
 														    'segmentObjects.node_end.lon': 1,
-														    'segmentObjects.density': 1,
-														    'segmentObjects.velocity': 1
+														    'segmentObjects.density': '$segmentDensity.density',
+														    'segmentObjects.velocity': '$segmentDensity.velocity'
 														  } 
 											},											
 											{ '$unwind': '$segmentObjects' },
@@ -164,6 +171,7 @@ var GetDensityByStreetIds = function(streetIds, resolve, reject) {
 
 	// Result
 	promise.then((data) => {
+		console.log(data);
 		return resolve(data);
 	});
 	// Error
